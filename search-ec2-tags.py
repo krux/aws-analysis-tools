@@ -45,13 +45,22 @@ if __name__ == '__main__':
                       default=False)
     (options, args) = parser.parse_args()
 
-    ec2_regions = boto.ec2.regions()
+    regions = boto.ec2.regions()
+    filters = []
 
-    if not options.regions:
-        regions = ec2_regions
-    else:
-        regions = [reg for reg in ec2_regions
-                   if reg.name in options.regions]
+    # Filters is a list of filter functions that will be applied to the
+    # region list. Each function takes one argument, the boto RegionInfo
+    # object. A region will only be checked if all filter functions return
+    # true for that region.
+    if options.regions:
+        filters.extend([lambda r: r.name in options.regions])
+    filters.extend([
+        # We don't have access to gov regions, so we filter those out.
+        lambda r: '-gov-' not in r.name,
+    ])
+
+    for filter_fn in filters:
+        regions = filter(filter_fn, regions)
 
     query = {}
     for arg in args:
@@ -71,9 +80,6 @@ if __name__ == '__main__':
                 query['tag-value'] = query.get('tag-value') + ['*' + string[0] + '*']
 
     for region in regions:
-        # we don't have access to gov regions in AWS:
-        if '-gov-' in region.name:
-            continue
         ec2 = region.connect()
 
         for res in ec2.get_all_instances(filters=query):
