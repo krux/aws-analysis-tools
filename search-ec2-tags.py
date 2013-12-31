@@ -57,6 +57,8 @@ if __name__ == '__main__':
     filters.extend([
         # We don't have access to gov regions, so we filter those out.
         lambda r: '-gov-' not in r.name,
+        # We also don't have access to the China regions.
+        lambda r: not r.name.startswith('cn-')
     ])
 
     for filter_fn in filters:
