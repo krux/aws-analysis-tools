@@ -64,8 +64,13 @@ def remove_ssh_warnings(stderr, options):
 
 
 def query(string):
-    stdout, stderr = subprocess.Popen(['kpython', '/usr/local/bin/search-ec2-tags.py'] + string.split(),
-                                      stderr=subprocess.PIPE, stdout=subprocess.PIPE).communicate()
+    stdout, stderr = subprocess.Popen(['kcollectd2-python',
+                                       '/usr/local/bin/search-ec2-tags.py',
+                                       '--query',
+                                      ] + string.split(),
+                                      stderr=subprocess.PIPE,
+                                      stdout=subprocess.PIPE
+                                     ).communicate()
     print "matched the following hosts: %s" % ', '.join(stdout.splitlines())
     if stderr:
         return ["Error: %s" % stderr,]

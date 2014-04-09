@@ -1,89 +1,97 @@
-#!/usr/bin/env python
-#
-# Returns all hostnames that have the specified ec2 tag
-#
-# Takes one or more filters, of the type:
-# either the string to search for in the Value of all tags, or Tag:Value.
-#
-# To search for multiple things, use multiple filters as the args.
-#
-# This *is* case sensitive.
-#
-# Will check every ec2 region, unless, e.g. --regions='us-east-1,eu-west-1'
-#
-# Examples:
-#   ./search-ec2-tags.py s_classes:s_puppetmaster
-#   ./search-ec2-tags.py s_puppetmaster environment:production
-#
-# CAVEAT: if you specify multiple of the same key, (tag:Name, or just a plain
-# string to search for in the value, e.g. 'puppetmaster'),
-# those are OR'd. If you specify 1) tag-value and 1) tag:value, the result is
-# AND'd. Sorry, that's a limitation of the API, and I only want to make one
-# API call to each region.
-#
-# Examples:
-#    Return all nodes with tag s_class:s_puppetmaster AND nodes with either
-#    'production' or 'development' in the value of any tag.
-#   ./search-ec2-tags.py s_classes:s_puppetmaster production development
-#
-#   Return all nodes with tag=Name matching 'foo' OR 'bar'
-#   ./search-ec2-tags.py Name:foo Name:bar
-#
-#   Return all nodes w/ tag=Name matching 'foo' and tag environment:production
-#   ./search-ec2-tags.py Name:foo environment:production
-#
+### -*- coding: utf-8 -*-
+###
+### © 2014 Krux Digital, Inc.
+### Author: Jeff Pierce <jeff.pierce@krux.com>
+###
+
+"""
+"""
+
+##########################
+### Standard Libraries ###
+##########################
+
+from __future__ import absolute_import
+from pprint import pprint
+
+######################
+### Krux Libraries ###
+######################
+
+import krux.cli
+
+#############################
+### Third Party Libraries ###
+#############################
+
 import boto.ec2
-import sys
-from optparse import OptionParser
+
+
+class Application(krux.cli.Application):
+    def __init__(self):
+        ### Call superclass to get krux-stdlib
+        super(Application, self).__init__(name = 'search_ec2_tags')
+
+    def add_cli_arguments(self, parser):
+        group = krux.cli.get_group(parser, self.name)
+        group.add_argument(
+            '--regions',
+            help    = "Defines the EC2 region to search under.  Provide a comma separated string to search multiple regions.",
+            default = False
+        )
+        group.add_argument(
+            '--query',
+            default = '*',
+            help    = "Defines the search terms to use.  Provide a comma separated list to use multiple terms. Defaults to a query that will return all instances."
+        )
+
+    def search_tags(self):
+        regions = boto.ec2.regions()
+        filters = []
+        query   = {}
+
+        if self.args.regions:
+            filters.extend([lambda r: r.name in group.args.regions.split(',')])
+        filters.extend([
+            lambda r: '-gov-' not in r.name,
+            lambda r: not r.name.startswith('cn-')
+        ])
+
+        for some_filter in filters:
+            regions = filter(some_filter, regions)
+
+        query_terms = self.args.query.split(',')
+
+        for search_param in query_terms:
+            search_term = search_param.rsplit('::',1)
+            if len(search_term) == 1:
+                if "tag-value" not in query:
+                    query.update({"tag-value": ['*' + search_term[0] + '*']})
+                else:
+                    query["tag-value"] = query.get('tag-value') + ['*' + search_term[0] + '*']
+            else:
+                tag, val = search_term
+                if 'tag-key' not in query:
+                    query.update({'tag-key': ['*' + tag + '*']})
+                else:
+                    query['tag-key'] = query.get('tag-key') + ['*' + tag + '*']
+                if 'tag-value' not in query:
+                    query.update({"tag-value": ['*' + val +'*']})
+                else:
+                    query['tag-value'] = query.get('tag-value') + ['*' + val + '*']
+
+        for region in regions:
+            ec2 = region.connect()
+
+            for res in ec2.get_all_instances(filters=query):
+                instance = res.instances[0]
+                print instance.tags.get('Name')
+
+def main():
+    app = Application()
+    app.search_tags()
 
 
 if __name__ == '__main__':
+    main()
 
-    parser = OptionParser(usage=__doc__)
-    parser.add_option("--regions",
-                      help='ec2 regions to check, comman-sep string',
-                      default=False)
-    (options, args) = parser.parse_args()
-
-    regions = boto.ec2.regions()
-    filters = []
-
-    # Filters is a list of filter functions that will be applied to the
-    # region list. Each function takes one argument, the boto RegionInfo
-    # object. A region will only be checked if all filter functions return
-    # true for that region.
-    if options.regions:
-        filters.extend([lambda r: r.name in options.regions])
-    filters.extend([
-        # We don't have access to gov regions, so we filter those out.
-        lambda r: '-gov-' not in r.name,
-        # We also don't have access to the China regions.
-        lambda r: not r.name.startswith('cn-')
-    ])
-
-    for filter_fn in filters:
-        regions = filter(filter_fn, regions)
-
-    query = {}
-    for arg in args:
-        string = arg.split(':', 1)
-        if len(string) == 2:
-            tag, val = string
-            # not in the dict yet? good! Add it.
-            if "tag:%s" % tag not in query:
-                query.update({"tag:%s" % tag: ['*' + val + '*']})
-            else:
-            # already there? extend the val (array) with another item:
-                query['tag:%s' % tag] = query.get('tag:%s' % tag) + ['*' + val + '*']
-        else:
-            if 'tag-value' not in query:
-                query.update({'tag-value': ['*' + string[0] + '*']})
-            else:
-                query['tag-value'] = query.get('tag-value') + ['*' + string[0] + '*']
-
-    for region in regions:
-        ec2 = region.connect()
-
-        for res in ec2.get_all_instances(filters=query):
-            instance = res.instances[0]
-            print instance.tags.get('Name')
