@@ -15,12 +15,13 @@
 #  --connect-timeout    ssh ConnectTimeout option
 #  --timeout            amount of time to wait, before killing the ssh
 #
+# Be sure to use double colons instead of single colons with your query.
 import sys
 import time
 import select
-from search-ec2-tags import parse_query
-from search-ec2-tags.Application import search_tags
+import subprocess
 from optparse import OptionParser
+from search_ec2_tags import parse_query, search_tags
 
 
 def hilite(string, options, color='white', bold=False):
@@ -66,7 +67,7 @@ def remove_ssh_warnings(stderr, options):
 
 def query(string):
     parsed_query = parse_query(string)
-    response = search-ec2-tags(parsed_query)
+    response = search_tags(parsed_query)
     print "Matched the following hosts: %s" % ', '.join(response)
     return response
 
@@ -74,7 +75,10 @@ def query(string):
 if __name__ == '__main__':
 
     parser = OptionParser(usage=__doc__)
-    parser.add_option("--query", help='the string to pass search-ec2-tags.py', default=False)
+    parser.add_option("--query",
+            help='the string to pass search-ec2-tags.py.  Use :: instead of :.',
+            default=False
+    )
     parser.add_option("--host", help='comma-sep list of hosts to ssh to', default=False)
     parser.add_option("--timeout", help='amount of time to wait before killing the ssh',
                       default=240)
