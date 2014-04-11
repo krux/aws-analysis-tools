@@ -75,6 +75,9 @@ def parse_tags(tagdata, prefix=''):
     return parsed
 
 def chunk_tags(tag_string, split_val=249):
+    """
+    Splits tag values > 255 characters into 249 character chunks.
+    """
     split_tags = []
     numsplits = 0
     for start in range(0, len(tag_string), split_val):
@@ -111,28 +114,39 @@ class Application(krux.cli.Application):
         inst_id   = metadata['instance-id']
         ec2       = boto.ec2.connect_to_region(region)
 
+        ### Grab classes from facts.yaml or other specified file.
         with open(self.args.yaml_file, 'r') as yamlfile:
             puppet = yaml.safe_load(yamlfile)
 
+        ### Empty dictionaries to fill using the recursion functions
         tags_dict = {}
-
         dict_classes = {}
 
+        ### Grab only krux_classes that start with s_ and don't end with params
         s_classes = [str(classes) for classes in puppet['krux_classes'].split()
                         if classes.startswith(TAG_STARTS_WITH) and not
                         classes.endswith(IGNORE_TAG)]
 
+        ### Recursively create tag dictionary
         for s_class in s_classes:
             build_dict(s_class, dict_classes)
 
+        ### Assign to intermediate variable for conversion from nested dictionary
+        ### to tag format
         tags = dict(parse_tags(dict_classes))
 
         for key, value in tags.iteritems():
+            ### If the value length is under 254, no need to split.
             if len(value) < 254:
                 tags_dict[key] = value
             else:
+                ### But if it's larger than that, run through chunk_tags to
+                ### split them.
                 split_tags, numsplit = chunk_tags(value)
                 tags_dict[key] = 'split,' + str(numsplit)
+
+                ### If we didn't split at a comma, put the split tag in the
+                ### next split level up.
                 for splitnum in range(len(split_tags)):
                     if splitnum < len(split_tags) - 1:
                         split_tag = split_tags[splitnum].rsplit(',',1)
@@ -142,10 +156,14 @@ class Application(krux.cli.Application):
                     else:
                         tags_dict[key + str(splitnum)] = split_tags[splitnum]
 
+        ### Populate our tags dictionary with our s_class tags, environment
+        ### information, and the cluster the server is in
         tags_dict['s_classes']    = ','.join(tags_dict.keys())
         tags_dict['environment']  = puppet['environment']
         tags_dict['cluster_name'] = puppet['cluster_name']
 
+        ### Print the dictionary we'd be sending to AWS if we're testing,
+        ### otherwise, update EC2 with the new tags.
         if self.args.test:
             pprint(tags_dict)
         else:

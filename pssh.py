@@ -17,8 +17,9 @@
 #
 import sys
 import time
-import subprocess
 import select
+from search-ec2-tags import parse_query
+from search-ec2-tags.Application import search_tags
 from optparse import OptionParser
 
 
@@ -64,17 +65,10 @@ def remove_ssh_warnings(stderr, options):
 
 
 def query(string):
-    stdout, stderr = subprocess.Popen(['kcollectd2-python',
-                                       '/usr/local/bin/search-ec2-tags.py',
-                                       '--query',
-                                      ] + string.split(),
-                                      stderr=subprocess.PIPE,
-                                      stdout=subprocess.PIPE
-                                     ).communicate()
-    print "matched the following hosts: %s" % ', '.join(stdout.splitlines())
-    if stderr:
-        return ["Error: %s" % stderr,]
-    return stdout.splitlines()
+    parsed_query = parse_query(string)
+    response = search-ec2-tags(parsed_query)
+    print "Matched the following hosts: %s" % ', '.join(response)
+    return response
 
 
 if __name__ == '__main__':

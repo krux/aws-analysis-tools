@@ -5,6 +5,8 @@
 ###
 
 """
+Searches EC2 tags and returns a list of servers that match the query terms.
+Use double colons (::) rather than single colons like the previous version.
 """
 
 ##########################
@@ -45,30 +47,58 @@ class Application(krux.cli.Application):
             help    = "Defines the search terms to use.  Provide a comma separated list to use multiple terms. Defaults to a query that will return all instances."
         )
 
-    def search_tags(self):
-        regions = boto.ec2.regions()
-        filters = []
-        query   = {}
+    def parse_query(self, query_to_parse):
+        """
+        Converts comma-separated string of query terms into a list to use as
+        filters.
+        """
+        return query_to_parse.split(',')
 
+    def search_tags(self,query_terms):
+        """
+        Searches EC2 instances based on search terms.
+        """
+        regions    = boto.ec2.regions()
+        filters    = []
+        query      = {}
+        inst_names = []
+
+        ### Set filters
         if self.args.regions:
+            ### lambda:  if we've specified a region, only pick regions that
+            ### match the provided regions
             filters.extend([lambda r: r.name in group.args.regions.split(',')])
+        ### lambdas:  remove govcloud and China to improve search speed
         filters.extend([
             lambda r: '-gov-' not in r.name,
             lambda r: not r.name.startswith('cn-')
         ])
 
+        ### Filter out unneeded regions from our regions list.
         for some_filter in filters:
             regions = filter(some_filter, regions)
 
-        query_terms = self.args.query.split(',')
-
+        ### Populate query dictionary to send to AWS
         for search_param in query_terms:
+            ### Split the last term from the query, as the new tagging system
+            ### will create keys for each step of the way up to last one, which
+            ### will be a value.
+            ###
+            ### Examples:
+            ###     Name::period* searches for tag Name and value period*
+            ###     s_periodic::components::s2s::zanox_sync searches for
+            ###         tag s_periodic::components::s2s and value zanox_sync.
             search_term = search_param.rsplit('::',1)
+
+            ### If there's nothing to split, like with a query for s_periodic,
+            ### add it to the value search.
             if len(search_term) == 1:
                 if "tag-value" not in query:
                     query.update({"tag-value": ['*' + search_term[0] + '*']})
                 else:
                     query["tag-value"] = query.get('tag-value') + ['*' + search_term[0] + '*']
+            ### But, if there is something that was split (like s_classes::s_periodic),
+            ### add the first value to tag-key and the second value to tag-value.
             else:
                 tag, val = search_term
                 if 'tag-key' not in query:
@@ -80,16 +110,21 @@ class Application(krux.cli.Application):
                 else:
                     query['tag-value'] = query.get('tag-value') + ['*' + val + '*']
 
+        ### Search each region for matching tags/values and return them as a list.
         for region in regions:
             ec2 = region.connect()
 
             for res in ec2.get_all_instances(filters=query):
                 instance = res.instances[0]
-                print instance.tags.get('Name')
+                inst_names.append(instance.tags.get('Name'))
+
+        return inst_names
 
 def main():
     app = Application()
-    app.search_tags()
+    parsed_query = app.parse_query(app.args.query)
+    for inst in app.search_tags(parsed_query):
+        print inst
 
 
 if __name__ == '__main__':
