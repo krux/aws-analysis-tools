@@ -21,7 +21,11 @@ import time
 import select
 import subprocess
 from optparse import OptionParser
-from search_ec2_tags import parse_query, search_tags
+
+### Nasty hack to get around the fact that search-ec2-tags has dashes in the name
+search_ec2_tags = __import__("search-ec2-tags")
+parse_query = search_ec2_tags.parse_query
+search_tags = search_ec2_tags.search_tags
 
 
 def hilite(string, options, color='white', bold=False):

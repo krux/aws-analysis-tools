@@ -6,7 +6,6 @@
 
 """
 Searches EC2 tags and returns a list of servers that match the query terms.
-Use double colons (::) rather than single colons like the previous version.
 """
 
 ##########################
@@ -14,6 +13,7 @@ Use double colons (::) rather than single colons like the previous version.
 ##########################
 
 from __future__ import absolute_import
+import sys
 
 ######################
 ### Krux Libraries ###
@@ -32,7 +32,12 @@ def parse_query(query_to_parse):
     """
     Converts comma-separated string of query terms into a list to use as filters.
     """
-    return query_to_parse.split(',')
+    if isinstance(query_to_parse, list):
+        _query = ','.join(query_to_parse)
+    else:
+        _query = query_to_parse
+    return _query.split(',')
+
 
 def search_tags(query_terms,passed_regions=False):
     """
@@ -49,7 +54,8 @@ def search_tags(query_terms,passed_regions=False):
         ### match the provided regions
         filters.extend([lambda r: r.name in passed_regions.split(',')])
 
-    ### lambdas:  remove govcloud and China to improve search speed
+    ### lambdas:  remove govcloud and China to improve search speed since
+    ### we don't have access to them.
     filters.extend([
         lambda r: '-gov-' not in r.name,
         lambda r: not r.name.startswith('cn-')
@@ -69,7 +75,7 @@ def search_tags(query_terms,passed_regions=False):
         ###     Name::period* searches for tag Name and value period*
         ###     s_periodic::components::s2s::zanox_sync searches for
         ###         tag s_periodic::components::s2s and value zanox_sync.
-        search_term = search_param.rsplit('::',1)
+        search_term = search_param.rsplit(':',1)
 
         ### If there's nothing to split, like with a query for s_periodic,
         ### add it to the value search.
@@ -82,15 +88,10 @@ def search_tags(query_terms,passed_regions=False):
         ### add the first value to tag-key and the second value to tag-value.
         else:
             tag, val = search_term
-            if 'tag-key' not in query:
-                query.update({'tag-key': ['*' + tag + '*']})
+            if 'tag:%s' % tag not in query:
+                query.update({"tag:%s" % tag: ['*' + val + '*']})
             else:
-                query['tag-key'] = query.get('tag-key') + ['*' + tag + '*']
-
-            if 'tag-value' not in query:
-                query.update({"tag-value": ['*' + val +'*']})
-            else:
-                query['tag-value'] = query.get('tag-value') + ['*' + val + '*']
+                query["tag:%s" % tag] = query.get("tag:%s" % tag) + ['*' + val + '*']
 
     ### Search each region for matching tags/values and return them as a list.
     for region in regions:
@@ -102,30 +103,38 @@ def search_tags(query_terms,passed_regions=False):
 
     return inst_names
 
+
 class Application(krux.cli.Application):
     def __init__(self):
         ### Call superclass to get krux-stdlib
-        super(Application, self).__init__(name = 'search_ec2_tags')
+        super(Application, self).__init__(name = 'search-ec2-tags')
+
 
     def add_cli_arguments(self, parser):
         group = krux.cli.get_group(parser, self.name)
         group.add_argument(
             '--regions',
+            nargs   = 1,
             help    = "Defines the EC2 region to search under.  Provide a comma separated string to search multiple regions.",
             default = False
         )
-        group.add_argument(
-            '--query',
-            default = '*',
-            help    = "Defines the search terms to use.  Provide a comma separated list to use multiple terms. Defaults to a query that will return all instances."
+        parser.add_argument(
+            'query',
+            nargs   = "*",
+            default = None,
+            help    = "Defines the search terms to use.  Provide a comma separated list to use multiple terms."
         )
 
 
 def main():
     app = Application()
 
-    parsed_query = parse_query(app.args.query)
-    print ', '.join(search_tags(parsed_query, app.args.regions))
+    if len(app.args.query) > 0:
+        parsed_query = parse_query(app.args.query)
+        print "Matched the following hosts: " + ', '.join(search_tags(parsed_query, app.args.regions))
+    else:
+        print 'search-ec2-tags.py requires a search term.  Please run it with one.'
+        sys.exit(1)
 
 
 if __name__ == '__main__':
