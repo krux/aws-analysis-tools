@@ -51,7 +51,7 @@ class Application(krux.cli.Application):
         group.add_argument(
             '--yaml-file',
             default = PUPPET_YAML_FILE,
-            help    = "Specify a YAML file to read from. (default: %(default)s)"
+            help    = "Specify a YAML file to read the class tags from. (default: %(default)s)"
         )
         group.add_argument(
             '--test',
@@ -61,7 +61,7 @@ class Application(krux.cli.Application):
         )
 
 
-    def update_tags(self):
+    def update_tags(self, yaml_file):
         """
         Gathers classes together into tags and updates EC2 with them.
         """
@@ -71,7 +71,7 @@ class Application(krux.cli.Application):
         ec2       = boto.ec2.connect_to_region(region)
 
         ### Grab classes from facts.yaml or other specified file.
-        with open(self.args.yaml_file, 'r') as yamlfile:
+        with open(yaml_file, 'r') as yamlfile:
             puppet = yaml.safe_load(yamlfile)
 
         ### Tag dictionary to fill using the recursion functions
@@ -103,7 +103,7 @@ class Application(krux.cli.Application):
 
 def main():
     app = Application()
-    app.update_tags()
+    app.update_tags(app.args.yaml_file)
 
 
 if __name__ == '__main__':
