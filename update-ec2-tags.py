@@ -43,7 +43,7 @@ IGNORE_TO_S3	 = 'to_s3'
 class Application(krux.cli.Application):
     def __init__(self):
         ### Call superclass to get krux-stdlib
-        super(Application, self).__init__(name = 'update_ec2_tags')
+        super(Application, self).__init__(name = 'update-ec2-tags')
 
 
     def add_cli_arguments(self, parser):
