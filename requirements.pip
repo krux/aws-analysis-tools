@@ -1,4 +1,26 @@
 --extra-index-url https://staticfiles.krxd.net/foss/pypi/
-krux-stdlib
-boto
-texttable
+krux-stdlib==0.8.0
+boto==2.27.0
+texttable==0.8.1
+
+## The following are transitive requirements
+GitPython==0.1.7
+Jinja2==2.7.2
+MarkupSafe==0.21
+Pygments==1.6
+Sphinx==1.2.2
+argparse==1.2.1
+async==0.6.1
+backports.ssl-match-hostname==3.4.0.2
+docutils==0.11
+fudge==1.0.3
+gitdb==0.5.4
+kruxstatsd==0.2.2
+lockfile==0.9.1
+nose==1.2.1
+pygerduty==0.19
+simplejson==3.4.0
+smmap==0.8.2
+statsd==2.1.2
+tornado==3.2
+wsgiref==0.1.2
