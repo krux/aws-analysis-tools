@@ -38,7 +38,7 @@ def parse_query(query_to_parse):
     if isinstance(query_to_parse, list):
         _query = ','.join(query_to_parse)
     else:
-        _query = query_to_parse
+        _query = query_to_parse.replace(' ',',')
     return _query.split(',')
 
 
