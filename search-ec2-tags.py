@@ -30,7 +30,10 @@ import boto.ec2
 
 def parse_query(query_to_parse):
     """
-    Converts comma-separated string of query terms into a list to use as filters.
+    Converts a comma or space-separated string of query terms into a list to use
+    as filters.  The use of positional arguments on the CLI provides lists (which
+    we join and resplit to avoid any formatting issues), while strings passed
+    from pssh.py just get split since those should never come over as a list.
     """
     if isinstance(query_to_parse, list):
         _query = ','.join(query_to_parse)
@@ -41,7 +44,8 @@ def parse_query(query_to_parse):
 
 def search_tags(query_terms,passed_regions=False):
     """
-    Searches EC2 instances based on search terms.
+    Searches EC2 instances based on parsed search terms returned by parse_query()
+    Skips GovCloud and China regions, and can be further filtered by region.
     """
     regions    = boto.ec2.regions()
     filters    = []
@@ -67,13 +71,17 @@ def search_tags(query_terms,passed_regions=False):
 
     ### Populate query dictionary to send to AWS
     for search_param in query_terms:
-        ### Splits the query at : if it's there, as the new tagging system
-        ### will create keys for each step of the way up to last one, which
-        ### will be a value.
+        ### Splits the query at : if it's a tag:value search parameter and adds
+        ### those to the query dictionary (or appends the value to an existing
+        ### tag), otherwise it creates a key of tag-value (if it doesn't already
+        ### exist) with the search term as the value and performs a value only
+        ### search.
         ###
         ### Examples:
-        ###     Name:period* searches for tag Name and value period*
-        ###     searches for value matching *s_periodic*.
+        ###     Name:period searches for tag Name and value *period*
+        ###     s_periodic searches for value matching *s_periodic*.
+        ###     Name:period*,Name:webapp* searches for tag Name with values
+        ###         *period* and *webapp* as an OR search.
 
         ### Check to see if we're searching for an s_class where the split
         ### would cause a problem
@@ -82,15 +90,23 @@ def search_tags(query_terms,passed_regions=False):
         else:
             search_term = search_param.split(':',1)
 
-        ### If there's nothing to split, like with a query for s_periodic,
-        ### add it to the value search.
+        ### If the query contains just a value, like with a query for s_periodic,
+        ### add it to the value search, len(search_term) will be 1 and gets added
+        ### to tag value.  We always search to ensure that the key for the dictionary
+        ### hasn't already been made before adding it, otherwise, we append the
+        ### value to the already existing key.  This goes for a tag:value query
+        ### as well.
         if len(search_term) == 1:
             if "tag-value" not in query:
                 query.update({"tag-value": ['*' + search_term[0] + '*']})
             else:
                 query["tag-value"] = query.get('tag-value') + ['*' + search_term[0] + '*']
-        ### But, if there is something that was split (like s_classes:s_periodic),
-        ### add the first value to tag-key and the second value to tag-value.
+
+        ### But, if the query is in tag:value format (like s_classes:s_periodic),
+        ### len(search_term) will be 2, and if the query was s_classes:s_periodic,
+        ### search_term would be [ 's_classes', 's_periodic' ], so we assign
+        ### search_term[0] to the tag variable, and search_term[1] to the val
+        ### variable.
         else:
             tag, val = search_term
             if 'tag:%s' % tag not in query:
@@ -127,13 +143,18 @@ class Application(krux.cli.Application):
             'query',
             nargs   = "*",
             default = None,
-            help    = "Defines the search terms to use.  Provide a comma separated list to use multiple terms."
+            help    = "Defines the search terms to use.  Terms can be separated by a comma or a space, but not both."
         )
 
 
 def main():
     app = Application()
 
+    ### Since we can't require positional arguments using the required flag
+    ### when defining the add_argument for query, we check to see if the length
+    ### of apps.args.query (which is a list) is greater than 0.  If it is,
+    ### proceed normally, otherwise, print a simple usage statement and exit
+    ### with status 1.
     if len(app.args.query) > 0:
         parsed_query = parse_query(app.args.query)
         print "Matched the following hosts: " + ', '.join(search_tags(parsed_query, app.args.regions))
