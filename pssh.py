@@ -1,4 +1,5 @@
-#!/usr/bin/env kpython
+#!/usr/bin/env kaws-python
+
 # Parallel SSH to a list of nodes, returned from search-ec2-tags.py
 # (must be in your path).
 #
