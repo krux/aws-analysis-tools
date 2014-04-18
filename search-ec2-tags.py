@@ -67,15 +67,20 @@ def search_tags(query_terms,passed_regions=False):
 
     ### Populate query dictionary to send to AWS
     for search_param in query_terms:
-        ### Split the last term from the query, as the new tagging system
+        ### Splits the query at : if it's there, as the new tagging system
         ### will create keys for each step of the way up to last one, which
         ### will be a value.
         ###
         ### Examples:
-        ###     Name::period* searches for tag Name and value period*
-        ###     s_periodic::components::s2s::zanox_sync searches for
-        ###         tag s_periodic::components::s2s and value zanox_sync.
-        search_term = search_param.rsplit(':',1)
+        ###     Name:period* searches for tag Name and value period*
+        ###     searches for value matching *s_periodic*.
+
+        ### Check to see if we're searching for an s_class where the split
+        ### would cause a problem
+        if search_param.startswith('s_') and not search_param.startswith('s_classes'):
+            search_term = [search_param]
+        else:
+            search_term = search_param.split(':',1)
 
         ### If there's nothing to split, like with a query for s_periodic,
         ### add it to the value search.
@@ -84,7 +89,7 @@ def search_tags(query_terms,passed_regions=False):
                 query.update({"tag-value": ['*' + search_term[0] + '*']})
             else:
                 query["tag-value"] = query.get('tag-value') + ['*' + search_term[0] + '*']
-        ### But, if there is something that was split (like s_classes::s_periodic),
+        ### But, if there is something that was split (like s_classes:s_periodic),
         ### add the first value to tag-key and the second value to tag-value.
         else:
             tag, val = search_term
