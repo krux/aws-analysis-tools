@@ -14,12 +14,17 @@
 #  --keep-ssh-warnings  disable the removing of SSH warnings from stderr output
 #  --connect-timeout    ssh ConnectTimeout option
 #  --timeout            amount of time to wait, before killing the ssh
-#
+
 import sys
 import time
-import subprocess
 import select
+import subprocess
 from optparse import OptionParser
+
+### Nasty hack to get around the fact that search-ec2-tags has dashes in the name
+search_ec2_tags = __import__("search-ec2-tags")
+parse_query = search_ec2_tags.parse_query
+search_tags = search_ec2_tags.search_tags
 
 
 def hilite(string, options, color='white', bold=False):
@@ -64,18 +69,19 @@ def remove_ssh_warnings(stderr, options):
 
 
 def query(string):
-    stdout, stderr = subprocess.Popen(['kpython', '/usr/local/bin/search-ec2-tags.py'] + string.split(),
-                                      stderr=subprocess.PIPE, stdout=subprocess.PIPE).communicate()
-    print "matched the following hosts: %s" % ', '.join(stdout.splitlines())
-    if stderr:
-        return ["Error: %s" % stderr,]
-    return stdout.splitlines()
+    parsed_query = parse_query(string)
+    response = search_tags(parsed_query)
+    print "Matched the following hosts: %s" % ', '.join(response)
+    return response
 
 
 if __name__ == '__main__':
 
     parser = OptionParser(usage=__doc__)
-    parser.add_option("--query", help='the string to pass search-ec2-tags.py', default=False)
+    parser.add_option("--query",
+            help='the string to pass search-ec2-tags.py.',
+            default=False
+    )
     parser.add_option("--host", help='comma-sep list of hosts to ssh to', default=False)
     parser.add_option("--timeout", help='amount of time to wait before killing the ssh',
                       default=240)

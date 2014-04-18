@@ -1,2 +1,4 @@
+--extra-index-url https://staticfiles.krxd.net/foss/pypi/
+krux-stdlib
 boto
 texttable
