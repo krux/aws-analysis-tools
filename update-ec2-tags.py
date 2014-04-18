@@ -2,7 +2,7 @@
 
 ### -*- coding: utf-8 -*-
 ###
-### © 2014 Krux Digital, Inc.
+### (c) 2014 Krux Digital, Inc.
 ### Author: Jeff Pierce <jeff.pierce@krux.com>
 ###
 
