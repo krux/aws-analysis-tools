@@ -1,4 +1,4 @@
-#!python
+#!/usr/bin/env kaws-python
 
 import re
 import sys

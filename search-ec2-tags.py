@@ -1,3 +1,5 @@
+#!/usr/bin/env kaws-python
+
 ### -*- coding: utf-8 -*-
 ###
 ### © 2014 Krux Digital, Inc.
