@@ -14,8 +14,7 @@
 #  --keep-ssh-warnings  disable the removing of SSH warnings from stderr output
 #  --connect-timeout    ssh ConnectTimeout option
 #  --timeout            amount of time to wait, before killing the ssh
-#
-# Be sure to use double colons instead of single colons with your query.
+
 import sys
 import time
 import select
