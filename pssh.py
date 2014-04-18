@@ -80,7 +80,7 @@ if __name__ == '__main__':
 
     parser = OptionParser(usage=__doc__)
     parser.add_option("--query",
-            help='the string to pass search-ec2-tags.py.  Use :: instead of :.',
+            help='the string to pass search-ec2-tags.py.',
             default=False
     )
     parser.add_option("--host", help='comma-sep list of hosts to ssh to', default=False)
