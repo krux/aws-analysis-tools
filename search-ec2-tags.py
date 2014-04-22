@@ -47,7 +47,6 @@ def parse_query(query_to_parse):
     parsed_query = [x for x in split_query if not x.startswith('--region=')]
     region_query = [x for x in split_query if x.startswith('--region')]
     parsed_regions = ','.join([x.split('=')[1] for x in region_query])
-    print parsed_query, parsed_regions
 
     return parsed_query, parsed_regions
 
