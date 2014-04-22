@@ -41,10 +41,18 @@ def parse_query(query_to_parse):
         _query = ','.join(query_to_parse)
     else:
         _query = query_to_parse.replace(' ',',')
-    return _query.split(',')
+    split_query = _query.split(',')
+
+    ### Pick up passed --region query from pssh.py
+    parsed_query = [x for x in split_query if not x.startswith('--region=')]
+    region_query = [x for x in split_query if x.startswith('--region')]
+    parsed_regions = ','.join([x.split('=')[1] for x in region_query])
+    print parsed_query, parsed_regions
+
+    return parsed_query, parsed_regions
 
 
-def search_tags(query_terms,passed_regions=False):
+def search_tags(query_terms,passed_regions=None):
     """
     Searches EC2 instances based on parsed search terms returned by parse_query()
     Skips GovCloud and China regions, and can be further filtered by region.
@@ -55,7 +63,7 @@ def search_tags(query_terms,passed_regions=False):
     inst_names = []
 
     ### Set filters
-    if passed_regions:
+    if passed_regions is not None:
         ### lambda:  if we've specified a region, only pick regions that
         ### match the provided regions
         filters.extend([lambda r: r.name in passed_regions.split(',')])
