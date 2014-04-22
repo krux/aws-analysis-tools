@@ -62,7 +62,7 @@ def search_tags(query_terms,passed_regions=None):
     inst_names = []
 
     ### Set filters
-    if passed_regions is not None:
+    if passed_regions is not None and passed_regions:
         ### lambda:  if we've specified a region, only pick regions that
         ### match the provided regions
         filters.extend([lambda r: r.name in passed_regions.split(',')])
