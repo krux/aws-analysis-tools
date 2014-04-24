@@ -15,7 +15,7 @@ backports.ssl-match-hostname==3.4.0.2
 docutils==0.11
 fudge==1.0.3
 gitdb==0.5.4
-kruxstatsd==0.2.2
+kruxstatsd==0.2.3
 lockfile==0.9.1
 nose==1.2.1
 pygerduty==0.19
