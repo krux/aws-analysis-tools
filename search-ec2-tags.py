@@ -41,10 +41,17 @@ def parse_query(query_to_parse):
         _query = ','.join(query_to_parse)
     else:
         _query = query_to_parse.replace(' ',',')
-    return _query.split(',')
+    split_query = _query.split(',')
+
+    ### Pick up passed --region query from pssh.py
+    parsed_query = [x for x in split_query if not x.startswith('--region=')]
+    region_query = [x for x in split_query if x.startswith('--region')]
+    parsed_regions = ','.join([x.split('=')[1] for x in region_query])
+
+    return parsed_query, parsed_regions
 
 
-def search_tags(query_terms,passed_regions=False):
+def search_tags(query_terms,passed_regions=None):
     """
     Searches EC2 instances based on parsed search terms returned by parse_query()
     Skips GovCloud and China regions, and can be further filtered by region.
@@ -55,10 +62,13 @@ def search_tags(query_terms,passed_regions=False):
     inst_names = []
 
     ### Set filters
-    if passed_regions:
+    if passed_regions is not None and passed_regions:
         ### lambda:  if we've specified a region, only pick regions that
         ### match the provided regions
-        filters.extend([lambda r: r.name in passed_regions.split(',')])
+        if isinstance(passed_regions, list):
+            filters.extend([lambda r: r.name in passed_regions])
+        else:
+            filters.extend([lambda r: r.name in passed_regions.split(',')])
 
     ### lambdas:  remove govcloud and China to improve search speed since
     ### we don't have access to them.
@@ -158,7 +168,7 @@ def main():
     ### proceed normally, otherwise, print a simple usage statement and exit
     ### with status 1.
     if len(app.args.query) > 0:
-        parsed_query = parse_query(app.args.query)
+        parsed_query, regions = parse_query(app.args.query)
         print "Matched the following hosts: " + ', '.join(search_tags(parsed_query, app.args.regions))
     else:
         print 'search-ec2-tags.py requires a search term.  Please run it with one.'

@@ -70,8 +70,8 @@ def remove_ssh_warnings(stderr, options):
 
 
 def query(string):
-    parsed_query = parse_query(string)
-    response = search_tags(parsed_query)
+    parsed_query, parsed_regions = parse_query(string)
+    response = search_tags(parsed_query, passed_regions=parsed_regions)
     print "Matched the following hosts: %s" % ', '.join(response)
     return response
 
