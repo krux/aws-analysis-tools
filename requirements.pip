@@ -21,6 +21,6 @@ nose==1.2.1
 pygerduty==0.19
 simplejson==3.4.0
 smmap==0.8.2
-statsd==2.1.2
+statsd==2.0.3
 tornado==3.2
 wsgiref==0.1.2
