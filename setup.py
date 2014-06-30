@@ -40,7 +40,7 @@ setup(
     ],
     entry_points     = {
         'console_scripts': [
-            'krux-update-ec2-tags = update-ec2-tags:main',
+            'krux-update-ec2-tags = update_ec2_tags:main',
         ],
     },
 )
