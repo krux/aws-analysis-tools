@@ -23,7 +23,7 @@ import subprocess
 from optparse import OptionParser
 
 ### Nasty hack to get around the fact that search-ec2-tags has dashes in the name
-search_ec2_tags = __import__("search-ec2-tags")
+search_ec2_tags = __import__("search_ec2_tags")
 parse_query = search_ec2_tags.parse_query
 search_tags = search_ec2_tags.search_tags
 
@@ -76,8 +76,7 @@ def query(string):
     return response
 
 
-if __name__ == '__main__':
-
+def main():
     parser = OptionParser(usage=__doc__)
     parser.add_option("--query",
             help='the string to pass search-ec2-tags.py.',
@@ -209,3 +208,6 @@ if __name__ == '__main__':
             [bad.terminate() for bad in procs]
             print hilite("\nSorry, the following hosts took too long, and I gave up: %s\n" % ','.join(hosts), options, 'red')
             break
+
+if __name__ == '__main__':
+    main()

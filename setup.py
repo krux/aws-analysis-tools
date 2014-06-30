@@ -40,7 +40,11 @@ setup(
     ],
     entry_points     = {
         'console_scripts': [
+            'krux-search-ec2-tags = search_ec2_tags:main',
             'krux-update-ec2-tags = update_ec2_tags:main',
+            'krux-ec2-volumes     = volumes:list_volumes',
+            'krux-ec2-instances   = instances:list_instances',
+            'krux-ec2-pssh        = pssh:main',
         ],
     },
 )
