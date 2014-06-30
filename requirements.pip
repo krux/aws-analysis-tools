@@ -1,26 +1,46 @@
 --extra-index-url https://staticfiles.krxd.net/foss/pypi/
-krux-stdlib==0.8.0
-boto==2.27.0
+krux-stdlib==0.8.5
+krux-boto==0.0.4
+
+pyyaml==3.11
 texttable==0.8.1
 
-## The following are transitive requirements
-GitPython==0.1.7
-Jinja2==2.7.2
-MarkupSafe==0.21
+###
+### Transitive dependencies for krux-boto
+###
+boto==2.28.0
+
+###
+### Transitive dependencies for krux-stdlib
+###
+
+# sphinx (for API documentation)
+Sphinx==1.2b1
+# needed by sphinx
+Jinja2==2.6
+# needed by sphinx
 Pygments==1.6
-Sphinx==1.2.2
+docutils==0.10
+
+# stats
+kruxstatsd==0.2.2
+statsd==2.0.3
+
+# Latest tested versions
 argparse==1.2.1
+GitPython==0.3.2.RC1
+simplejson==3.3.0
+tornado==3.0.1
+# for lockfiles in cli
+lockfile==0.9.1
+
+# Test libraries
+coverage==3.6
+mock==1.0.1
+nose==1.2.1
+
+## The following requirements were added by pip --freeze:
 async==0.6.1
-backports.ssl-match-hostname==3.4.0.2
-docutils==0.11
 fudge==1.0.3
 gitdb==0.5.4
-kruxstatsd==0.2.3
-lockfile==0.9.1
-nose==1.2.1
-pygerduty==0.19
-simplejson==3.4.0
 smmap==0.8.2
-statsd==2.0.3
-tornado==3.2
-wsgiref==0.1.2
