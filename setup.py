@@ -36,7 +36,7 @@ REQUIREMENTS = os.path.join(BASE_DIR, 'requirements.pip')
 ALL_DEPENDENCIES = set([unicode(package.req)
                     for package in parse_requirements(REQUIREMENTS)])
 
-
+### XXX these all need to be in sub dirs, or it won't work :(
 setup(
     name             = 'aws-analysis-tools',
     version          = VERSION,
@@ -50,11 +50,11 @@ setup(
     install_requires = ALL_DEPENDENCIES,
     entry_points     = {
         'console_scripts': [
-            'krux-search-ec2-tags = search_ec2_tags:main',
-            'krux-update-ec2-tags = update_ec2_tags:main',
-            'krux-ec2-volumes     = volumes:list_volumes',
-            'krux-ec2-instances   = instances:list_instances',
-            'krux-ec2-pssh        = pssh:main',
+            'krux-search-ec2-tags = aws_analysis_tools.cli.search_ec2_tags:main',
+            'krux-update-ec2-tags = aws_analysis_tools.cli.update_ec2_tags:main',
+            'krux-ec2-volumes     = aws_analysis_tools.cli.volumes:list_volumes',
+            'krux-ec2-instances   = aws_analysis_tools.cli.instances:list_instances',
+            'krux-ec2-pssh        = aws_analysis_tools.cli.pssh:main',
         ],
     },
 )

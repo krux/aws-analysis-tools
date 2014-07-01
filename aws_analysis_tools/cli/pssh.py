@@ -23,10 +23,7 @@ import subprocess
 from optparse import OptionParser
 
 ### Nasty hack to get around the fact that search-ec2-tags has dashes in the name
-search_ec2_tags = __import__("search_ec2_tags")
-parse_query = search_ec2_tags.parse_query
-search_tags = search_ec2_tags.search_tags
-
+from aws_analysis_tools.cli.search_ec2_tags import parse_query, search_tags
 
 def hilite(string, options, color='white', bold=False):
     if options.no_color:
