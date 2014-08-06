@@ -6,6 +6,12 @@ pyyaml==3.11
 texttable==0.8.1
 
 ###
+### Flowdock integration
+###
+pyflowdock==0.3.35
+requests==2.3.0
+
+###
 ### Transitive dependencies for krux-boto
 ###
 boto==2.28.0
