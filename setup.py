@@ -55,6 +55,7 @@ setup(
             'krux-ec2-volumes     = volumes:list_volumes',
             'krux-ec2-instances   = instances:list_instances',
             'krux-ec2-pssh        = pssh:main',
+            'krux-ec2-events      = aws_analysis_tools.ec2_events:main',
         ],
     },
 )
