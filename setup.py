@@ -15,7 +15,7 @@ from pip.req    import parse_requirements
 import os
 
 # We use the version to construct the DOWNLOAD_URL.
-VERSION      = '0.0.5'
+VERSION      = '0.0.6'
 
 # URL to the repository on Github.
 REPO_URL     = 'https://github.com/krux/aws-analysis-tools'
@@ -50,11 +50,11 @@ setup(
     install_requires = ALL_DEPENDENCIES,
     entry_points     = {
         'console_scripts': [
-            'krux-search-ec2-tags = search_ec2_tags:main',
-            'krux-update-ec2-tags = update_ec2_tags:main',
-            'krux-ec2-volumes     = volumes:list_volumes',
-            'krux-ec2-instances   = instances:list_instances',
-            'krux-ec2-pssh        = pssh:main',
+            'krux-search-ec2-tags = aws_analysis_tools.cli.search_ec2_tags:main',
+            'krux-update-ec2-tags = aws_analysis_tools.cli.update_ec2_tags:main',
+            'krux-ec2-volumes     = aws_analysis_tools.cli.volumes:list_volumes',
+            'krux-ec2-instances   = aws_analysis_tools.cli.instances:list_instances',
+            'krux-ec2-pssh        = aws_analysis_tools.cli.pssh:main',
             'krux-ec2-events      = aws_analysis_tools.ec2_events:main',
         ],
     },
