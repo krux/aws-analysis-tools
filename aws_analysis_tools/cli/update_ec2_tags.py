@@ -43,42 +43,43 @@ class Application(krux_boto.Application):
 
         group.add_argument(
             '--instance-id',
-            default = None,
-            help    = "Specify the instance id to use. (default: %(default)s)"
+            help = "The instance id of the instance. Example: 'i-27459bcc' "
+            "(output of `facter ec2_instance_id`)"
         )
 
         group.add_argument(
             '--ec2-region',
-            default = None,
-            help    = "Specify the region to use. (default: %(default)s)"
+            required = True,
+            help     = "EC2 region to use. Example: 'us-east-1'. "
+            "NB: This is the *region*, not the *availability zone*."
         )
 
         group.add_argument(
             '--environment',
-            default = None,
-            help    = "Specify the environment to set. (default: %(default)s)"
+            default = 'dev',
+            help    = "The environment to set. (default: %(default)s)."
         )
 
         group.add_argument(
             '--cluster-name',
-            default = None,
-            help    = "Specify the cluster name to set. (default: %(default)s)"
+            required = True,
+            help     = "The cluster name to set. Example: 'apiservices-a'"
         )
 
         group.add_argument(
             '--classes',
             nargs   = "*",
-            default = None,
+            default = [],
             help    = "Specify class to tag with (can be used multiple times). "
-                      "(default: %(default)s)"
+            "(default: %(default)s)"
         )
 
         group.add_argument(
             '--dry-run',
             default = False,
             action  = 'store_true',
-            help    = "Do a dry run; find the tags, but do not update them in EC2. "
-                      "(default: %(default)s)"
+            help    = "Do a dry run; find the tags, but do not update them "
+            "in EC2. (default: %(default)s)"
         )
 
     def update_tags(self,
