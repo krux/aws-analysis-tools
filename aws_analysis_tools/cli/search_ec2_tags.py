@@ -28,6 +28,7 @@ import krux.cli
 #############################
 
 import boto.ec2
+import json
 
 
 def parse_query(query_to_parse):
@@ -138,9 +139,13 @@ def search_tags(query_terms,passed_regions=None):
 
 
 class Application(krux.cli.Application):
+    SUPPORTED_OUTPUT_FORMATS = [ 'legacy', 'json', 'unix' ]
+
     def __init__(self):
         ### Call superclass to get krux-stdlib
         super(Application, self).__init__(name = 'search-ec2-tags')
+
+        self.output_format = self.args.output_format
 
 
     def add_cli_arguments(self, parser):
@@ -151,12 +156,56 @@ class Application(krux.cli.Application):
             help    = "Defines the EC2 region to search under.  Provide a comma separated string to search multiple regions.",
             default = False
         )
+
+        group.add_argument(
+            '--output-format', '-f',
+            default = 'legacy',
+            choices = self.SUPPORTED_OUTPUT_FORMATS,
+            help    = 'Output format.  Default: %(default)s',
+        )
+
         parser.add_argument(
             'query',
-            nargs   = "*",
-            default = None,
-            help    = "Defines the search terms to use.  Terms can be separated by a comma or a space, but not both."
+            nargs   = "+",
+            help    = "Defines the search terms to use.  Terms can be "
+            "separated by a comma or a space, but not both."
         )
+
+    def render(self, results):
+        """
+        Render RESULTS using the output format specified by the CLI args.
+        """
+        renderer_name = 'render_{0}'.format(self.output_format)
+        renderer = getattr(self, renderer_name, self.render_default)
+        return renderer(results)
+
+    def render_default(results):
+        """
+        Default result renderer. Returns the RESULTS as a UTF8 encoded
+        string. Should generally never be used, but is here in case this
+        gets used as a library.
+        """
+        return unicode(results).encode('utf-8')
+
+    def render_legacy(self, results):
+        """
+        Legacy renderer. Returns a largely-useless string of the form "Matched
+        the following hosts: host1, host2, host3". Kept for
+        backwards-compatibility.
+        """
+        return 'Matched the following hosts: {0}'.format(', '.join(results))
+
+    def render_json(self, results):
+        """
+        Render the results in JSON format.
+        """
+        return json.dumps(results)
+
+    def render_unix(self, results):
+        """
+        Render the results in "unix" format, i.e. newline-separated values.
+        """
+        return '\n'.join(results)
 
 
 def main():
@@ -167,14 +216,9 @@ def main():
     ### of apps.args.query (which is a list) is greater than 0.  If it is,
     ### proceed normally, otherwise, print a simple usage statement and exit
     ### with status 1.
-    if len(app.args.query) > 0:
-        parsed_query, regions = parse_query(app.args.query)
-        print "Matched the following hosts: " + ', '.join(search_tags(parsed_query, app.args.regions))
-    else:
-        print 'search-ec2-tags.py requires a search term.  Please run it with one.'
-        sys.exit(1)
+    parsed_query, regions = parse_query(app.args.query)
+    print app.render(search_tags(parsed_query, app.args.regions))
 
 
 if __name__ == '__main__':
     main()
-
