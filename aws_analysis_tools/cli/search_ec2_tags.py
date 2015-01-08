@@ -22,12 +22,14 @@ import sys
 ######################
 
 import krux.cli
+import krux.logging
 
 #############################
 ### Third Party Libraries ###
 #############################
 
 import boto.ec2
+import boto.exception
 import json
 
 
@@ -52,7 +54,7 @@ def parse_query(query_to_parse):
     return parsed_query, parsed_regions
 
 
-def search_tags(query_terms,passed_regions=None):
+def search_tags(query_terms, passed_regions=None, log=None):
     """
     Searches EC2 instances based on parsed search terms returned by parse_query()
     Skips GovCloud and China regions, and can be further filtered by region.
@@ -61,6 +63,11 @@ def search_tags(query_terms,passed_regions=None):
     filters    = []
     query      = {}
     inst_names = []
+
+    if log is None:
+        log = krux.logging.get_logger(
+            'search_tags', level='error'
+        )
 
     ### Set filters
     if passed_regions is not None and passed_regions:
@@ -129,11 +136,16 @@ def search_tags(query_terms,passed_regions=None):
 
     ### Search each region for matching tags/values and return them as a list.
     for region in regions:
-        ec2 = region.connect()
+        try:
+            ec2 = region.connect()
 
-        for res in ec2.get_all_instances(filters=query):
-            instance = res.instances[0]
-            inst_names.append(instance.tags.get('Name'))
+            for res in ec2.get_all_instances(filters=query):
+                instance = res.instances[0]
+                inst_names.append(instance.tags.get('Name'))
+        except boto.exception.EC2ResponseError, e:
+            log.error('Unable to query region %r due to %r', region, e)
+            continue
+
 
     return inst_names
 

@@ -30,6 +30,7 @@ import krux_boto
 ### Third Party Libraries ###
 #############################
 
+import boto.exception
 import flowdock
 
 
@@ -75,10 +76,14 @@ class Application(krux_boto.Application):
         for r in ec2.get_all_regions():
 
             log.debug('Checking region: %s', r.name)
-            conn = self.boto.connect_ec2(region = r)
+            try:
+                conn = self.boto.connect_ec2(region = r)
 
-            ### Get the status of all instances
-            all_status = conn.get_all_instance_status()
+                ### Get the status of all instances
+                all_status = conn.get_all_instance_status()
+            except boto.exception.EC2ResponseError, e:
+                log.error('Unable to query region %r due to %r', r.name, e)
+                continue
             for status in all_status:
 
                 ### are there events?
