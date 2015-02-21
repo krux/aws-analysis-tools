@@ -4,8 +4,10 @@ krux-boto==0.0.4
 
 pyyaml==3.11
 texttable==0.8.1
+
+colorama==0.3.3
 docopt==0.6.2
-greenhouse==2.2.0
+reversefold.util==1.0.0
 
 ###
 ### Flowdock integration
