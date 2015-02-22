@@ -5,7 +5,7 @@
 Usage:
   pssh.py -h | --help
   pssh.py (--query=ec2_tag | --hosts=<hosts>) [--connect-timeout]
-      [--timeout=<timeout>] [--chunk-size=<chunk-size>] [--no-line-buf]
+      [--timeout=<timeout>] [--chunk-size=<chunk-size>] [--force-line-buf]
       <command>
 
 Options:
@@ -15,7 +15,10 @@ Options:
   --connect-timeout           ssh ConnectTimeout option
   --chunk-size=<chunk-size>   Number of ssh commands to run in parallel [default: 10]
                               (0 means run all at once)
-  --no-line-buf               Do not use automatic line buffering magic
+  --force-line-buf            Use automatic line buffering magic on the server.
+                              NOTE: This is known to cause issues with some commands,
+                               such as apt-get. If you get hanging output or strange
+                               IO errors, don't use this option for that command.
 """
 
 import multiprocessing.pool
@@ -71,6 +74,18 @@ def main():
         sys.exit(1)
 
     ppl = max(len(host) for host in hosts) + 3
+
+    ### This creates a library that automatically makes stdout line-buffered to try to enforece the
+    ### commands run to output a line to us as soon as one is ready. Since this library is injected
+    ### through LD_PRELOAD it affects all commands run, including subcommands if the environment is
+    ### passed through. If any command expects non-text output (such as when piping binary output)
+    ### this may cause the command to hang or behave in strange ways. It's still handy, though, for
+    ### long-running or output heavy commands for which you want to see output immediately.
+    if args['--force-line-buf']:
+        command = ('mkdir -p $HOME/lib; [ -e $HOME/lib/line-buffer.so ] '
+                   '|| echo "__attribute__((constructor))void f(){setvbuf(stdout,NULL,_IOLBF,0);}"'
+                   ' | gcc -s -include stdio.h -x c - -fPIC -shared -o "$HOME/lib/line-buffer.so";'
+                   ' export LD_PRELOAD="$HOME/lib/line-buffer.so"; ' + command)
 
     def do_ssh(host):
         try:
