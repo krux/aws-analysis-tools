@@ -20,6 +20,7 @@ Options:
 
 import multiprocessing.pool
 import sys
+import traceback
 
 from colorama import Fore
 from docopt import docopt
@@ -72,8 +73,11 @@ def main():
     ppl = max(len(host) for host in hosts) + 3
 
     def do_ssh(host):
-        ssh.SSHHost(host, prefix_pad_length=ppl,
-                    connect_timeout=int(args['--connect-timeout'])).run(command)
+        try:
+            ssh.SSHHost(host, prefix_pad_length=ppl,
+                        connect_timeout=int(args['--connect-timeout'])).run(command)
+        except ssh.SSHException:
+            traceback.print_exc()
 
     pool = multiprocessing.pool.ThreadPool(chunk_size)
     pool.map(do_ssh, hosts)
