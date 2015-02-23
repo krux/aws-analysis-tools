@@ -34,7 +34,7 @@ REQUIREMENTS = os.path.join(BASE_DIR, 'requirements.pip')
 # files (--requirement or -r), so we need to use pip's parser to get the
 # final list of dependencies.
 ALL_DEPENDENCIES = set([unicode(package.req)
-                    for package in parse_requirements(REQUIREMENTS)])
+                        for package in parse_requirements(REQUIREMENTS)])
 
 ### XXX these all need to be in sub dirs, or it won't work :(
 setup(
@@ -55,6 +55,7 @@ setup(
             'krux-ec2-volumes     = aws_analysis_tools.cli.volumes:list_volumes',
             'krux-ec2-instances   = aws_analysis_tools.cli.instances:list_instances',
             'krux-ec2-pssh        = aws_analysis_tools.cli.pssh:main',
+            'krux-ec2-pssh2       = aws_analysis_tools.cli.pssh2:main',
             'krux-ec2-events      = aws_analysis_tools.ec2_events:main',
         ],
     },
