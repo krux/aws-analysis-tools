@@ -5,7 +5,7 @@
 Usage:
   pssh.py -h | --help
   pssh.py (--query=ec2_tag | --hosts=<hosts>) [--connect-timeout]
-      [--timeout=<timeout>] [--chunk-size=<chunk-size>] [--force-line-buf]
+      [--timeout=<timeout>] [--concurrency=<concurrency>] [--force-line-buf]
       <command>
 
 Options:
@@ -13,7 +13,7 @@ Options:
   --query=<query>             the string to pass search-ec2-tags.py
   --hosts=<hosts>             comma-sep list of hosts to ssh to
   --connect-timeout           ssh ConnectTimeout option
-  --chunk-size=<chunk-size>   Number of ssh commands to run in parallel [default: 10]
+  --concurrency=<N>           Number of ssh commands to run in parallel [default: 10]
                               (0 means run all at once)
   --force-line-buf            Use automatic line buffering magic on the server.
                               NOTE: This is known to cause issues with some commands,
@@ -66,11 +66,11 @@ def main():
         print Fore.RED + 'Sorry, search-ec2-tags.py returned zero results.' + Fore.RESET
         sys.exit(1)
 
-    chunk_size = int(args['--chunk-size'])
-    if chunk_size == 0:
-        chunk_size = len(hosts)
-    elif chunk_size < 0:
-        print Fore.RED + '--chunk-size must be 0 or a positive integer' + Fore.RESET
+    concurrency = int(args['--concurrency'])
+    if concurrency == 0:
+        concurrency = len(hosts)
+    elif concurrency < 0:
+        print Fore.RED + '--concurrency must be 0 or a positive integer' + Fore.RESET
         sys.exit(1)
 
     ppl = max(len(host) for host in hosts) + 3
@@ -94,7 +94,7 @@ def main():
         except ssh.SSHException:
             traceback.print_exc()
 
-    pool = multiprocessing.pool.ThreadPool(chunk_size)
+    pool = multiprocessing.pool.ThreadPool(concurrency)
     pool.map(do_ssh, hosts)
 
 
