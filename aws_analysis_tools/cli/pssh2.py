@@ -4,21 +4,20 @@
 
 Usage:
   pssh.py -h | --help
-  pssh.py (--query=ec2_tag | --hosts=<hosts>) [--connect-timeout]
-      [--timeout=<timeout>] [--concurrency=<concurrency>] [--force-line-buf]
-      <command>
+  pssh.py (--query=ec2_tag | --hosts=<hosts>) [--connect-timeout=<timeout>]
+      [--concurrency=<concurrency>] [--force-line-buf] <command>
 
 Options:
-  -h --help                   show this help message and exit
-  --query=<query>             the string to pass search-ec2-tags.py
-  --hosts=<hosts>             comma-sep list of hosts to ssh to
-  --connect-timeout           ssh ConnectTimeout option
-  --concurrency=<N>           Number of ssh commands to run in parallel [default: 10]
-                              (0 means run all at once)
-  --force-line-buf            Use automatic line buffering magic on the server.
-                              NOTE: This is known to cause issues with some commands,
-                               such as apt-get. If you get hanging output or strange
-                               IO errors, don't use this option for that command.
+  -h --help                    show this help message and exit
+  --query=<query>              the string to pass search-ec2-tags.py
+  --hosts=<hosts>              comma-sep list of hosts to ssh to
+  --connect-timeout=<timeout>  the number of seconds to wait for a connection to be established
+  --concurrency=<N>            number of ssh commands to run in parallel [default: 10]
+                               (0 means run all at once)
+  --force-line-buf             Use automatic line buffering magic on the server.
+                               NOTE: This is known to cause issues with some commands, such as
+                                apt-get. If you get hanging output or strange IO errors, don't
+                                use this option for that command.
 """
 
 import multiprocessing.pool
