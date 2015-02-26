@@ -12,6 +12,7 @@ Options:
   --query=<query>              the string to pass search-ec2-tags.py
   --hosts=<hosts>              comma-sep list of hosts to ssh to
   --connect-timeout=<timeout>  the number of seconds to wait for a connection to be established
+                               [default: 10]
   --concurrency=<N>            number of ssh commands to run in parallel [default: 10]
                                (0 means run all at once)
   --force-line-buf             Use automatic line buffering magic on the server.
