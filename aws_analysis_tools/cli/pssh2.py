@@ -21,14 +21,27 @@ Options:
                                 use this option for that command.
 """
 
-import multiprocessing.pool
 import sys
 import traceback
 
 from colorama import Fore
 from docopt import docopt
 
+### NOTE: We are using eventlet instead of multiprocessing and other Python builtins
+### because, for some reason, on Python 2.6 our processes get run serially rather
+### than in parallel.
+from eventlet import greenpool
+
+from reversefold.util import multiproc
 from reversefold.util import ssh
+
+### We need to monkeypatch threading in reversefold.util.ssh so it uses the eventlet version
+import eventlet.green.threading
+multiproc.threading = eventlet.green.threading
+
+### We need to monkeypatch subprocess in reversefold.util.ssh so it uses the eventlet version
+import eventlet.green.subprocess
+ssh.subprocess = eventlet.green.subprocess
 
 ### Nasty hack to get around the fact that search-ec2-tags has dashes in the name
 from aws_analysis_tools.cli.search_ec2_tags import parse_query, search_tags
@@ -94,8 +107,10 @@ def main():
         except ssh.SSHException:
             traceback.print_exc()
 
-    pool = multiprocessing.pool.ThreadPool(concurrency)
-    pool.map(do_ssh, hosts)
+    pool = greenpool.GreenPool(concurrency)
+    for host in hosts:
+        pool.spawn_n(do_ssh, host)
+    pool.waitall()
 
 
 if __name__ == '__main__':
