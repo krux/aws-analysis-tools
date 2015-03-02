@@ -1,14 +1,16 @@
 --extra-index-url https://staticfiles.krxd.net/foss/pypi/
+
 krux-stdlib==0.8.5
 krux-boto==0.0.4
 
-pyyaml==3.11
+PyYAML==3.11
 texttable==0.8.1
 
 colorama==0.3.3
 docopt==0.6.2
-reversefold.util==1.0.2
+reversefold.util==1.0.4
 eventlet==0.17.1
+greenlet==0.4.5
 
 ###
 ### Flowdock integration
@@ -51,7 +53,12 @@ mock==1.0.1
 nose==1.2.1
 
 ## The following requirements were added by pip --freeze:
+argh==0.26.1
 async==0.6.1
 fudge==1.0.3
 gitdb==0.5.4
+pathtools==0.1.2
+pygerduty==0.25
 smmap==0.8.2
+watchdog==0.8.3
+wsgiref==0.1.2
