@@ -41,7 +41,7 @@ def test_provision(ubuntu_codename):
         sys.exit(1)
     ami = AMIS[ubuntu_codename]
     build_number = os.environ.get('BUILD_NUMBER', time.time())
-    hostname = 'bootstrap-test-lucid-%i.krxd.net' % (build_number,)
+    hostname = 'bootstrap-test-lucid-%s.krxd.net' % (build_number,)
     logging.info('Starting instance %s', hostname)
     proc = subprocess.Popen(
         '/bin/bash',
