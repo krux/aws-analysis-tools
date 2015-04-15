@@ -28,7 +28,12 @@ AMIS = {
 }
 
 
-def main(ubuntu_codename):
+def main():
+    args = docopt(__doc__)
+    test_provision(args['<ubuntu_codename>'])
+
+
+def test_provision(ubuntu_codename):
     logging.basicConfig(level=logging.INFO,
                         format='%(asctime)s - %(message)s')
     if ubuntu_codename not in AMIS:
@@ -88,5 +93,4 @@ def main(ubuntu_codename):
 
 
 if __name__ == '__main__':
-    args = docopt(__doc__)
-    main(args['<ubuntu_codename>'])
+    main()
