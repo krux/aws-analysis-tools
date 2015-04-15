@@ -4,12 +4,12 @@
 
 Usage:
   pssh.py -h | --help
-  pssh.py (--query=ec2_tag | --hosts=<hosts>) [--connect-timeout=<timeout>]
+  pssh.py [--query=ec2_tag | --hosts=<hosts>] [--connect-timeout=<timeout>]
       [--concurrency=<concurrency>] [--force-line-buf] <command>
 
 Options:
   -h --help                    show this help message and exit
-  --query=<query>              the string to pass search-ec2-tags.py
+  --query=<query>              the string to pass search-ec2-tags.py [default: "Name:*"]
   --hosts=<hosts>              comma-sep list of hosts to ssh to
   --connect-timeout=<timeout>  the number of seconds to wait for a connection to be established
                                [default: 10]
