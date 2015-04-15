@@ -41,7 +41,7 @@ def test_provision(ubuntu_codename):
         sys.exit(1)
     ami = AMIS[ubuntu_codename]
     build_number = os.environ.get('BUILD_NUMBER', time.time())
-    hostname = 'bootstrap-test-lucid-%s.krxd.net' % (build_number,)
+    hostname = 'bootstrap-test-%s-%s.krxd.net' % (ubuntu_codename, build_number)
     logging.info('Starting instance %s', hostname)
     proc = subprocess.Popen(
         '/bin/bash',
@@ -72,6 +72,7 @@ def test_provision(ubuntu_codename):
                      instance.id, instance.tags.get('krux-status'))
         time.sleep(5)
         instance.update()
+    logging.info('Bootstrap finished with status %r', instance.tags.get('krux-status'))
     if instance.tags['krux-status'] == 'bootstrap_failed':
         logging.error('Bootstrap failed, log into %s [%s] to debug, then terminate it.',
                       hostname, instance.id)
