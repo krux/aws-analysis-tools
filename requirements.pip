@@ -4,7 +4,7 @@ krux-stdlib==0.8.5
 krux-boto==0.0.4
 
 PyYAML==3.11
-texttable==0.8.1
+texttable==0.8.4
 
 colorama==0.3.3
 docopt==0.6.2
