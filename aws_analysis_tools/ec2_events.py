@@ -115,9 +115,7 @@ class Application(krux_boto.Application):
                         ### and log them here so we can send them elsewhere too
                         events.append(message)
 
-                        print self._jira.search_issues(
-                            self.JQL_TEMPLATE.format(instance_id=instance.id, yesterday=(date.today() - timedelta(1)).isoformat())
-                        )
+                        self._format_event_jira(instance, status, event)
 
         ### post to flowdock as well?
         if len(events) and self._flowdock:
@@ -150,6 +148,19 @@ class Application(krux_boto.Application):
                     )
 
         return message
+
+    def _format_event_jira(self, instance, status, event):
+        log   = self.logger
+        stats = self.stats
+
+        yesterday_str = (date.today() - timedelta(30)).isoformat()
+        issues = self._jira.search_issues(self.JQL_TEMPLATE.format(instance_id=instance.id, yesterday=yesterday_str))
+
+        for issue in issues:
+            # GOTCHA: This is kinda dumb, but Jira does not return the comments when issues are searched
+            # Thus, the comments for each issue have to be pulled separately
+            comments = self._jira.comments(issue)
+            print issue, [(c.author, c.body) for c in comments], instance.tags['Name']
 
     def _get_instance_by_id(self, ec2, id):
         """
