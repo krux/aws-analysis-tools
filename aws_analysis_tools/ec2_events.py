@@ -145,10 +145,7 @@ class Application(krux_boto.Application):
         Boto/AWS are silly, and you have to jump through this hoop
         to get an instance object
         """
-        res  = ec2.get_all_instances(instance_ids = [id])
-        inst = res[0].instances[0]
-
-        return inst
+        return ec2.get_only_instances(instance_ids = [id])[0]
 
 def main():
     app = Application()
