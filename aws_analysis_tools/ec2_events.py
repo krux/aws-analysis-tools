@@ -18,6 +18,7 @@ from __future__ import absolute_import
 import sys
 
 from pprint import pprint, pformat
+from datetime import date, timedelta
 
 ######################
 ### Krux Libraries ###
@@ -39,7 +40,7 @@ class Application(krux_boto.Application):
     COMPLETED = 'Completed'
     CANCELED  = 'Canceled'
 
-    JQL_TEMPLATE = 'description ~ "{instance_id}"'
+    JQL_TEMPLATE = 'description ~ "{instance_id}" AND type = "Maintenance Task" AND createdDate >= "{yesterday}"'
 
     def __init__(self):
         ### Call superclass to get krux-stdlib
@@ -115,7 +116,7 @@ class Application(krux_boto.Application):
                         events.append(message)
 
                         print self._jira.search_issues(
-                            self.JQL_TEMPLATE.format(instance_id=instance.id)
+                            self.JQL_TEMPLATE.format(instance_id=instance.id, yesterday=(date.today() - timedelta(1)).isoformat())
                         )
 
         ### post to flowdock as well?
