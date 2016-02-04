@@ -40,7 +40,8 @@ class Application(krux_boto.Application):
     COMPLETED = 'Completed'
     CANCELED  = 'Canceled'
 
-    JQL_TEMPLATE = 'description ~ "{instance_id}" AND type = "Maintenance Task" AND createdDate >= "{yesterday}"'
+    JQL_TEMPLATE = 'description ~ "{instance_id}" AND type = "Maintenance Task" AND createdDate >= "{yesterday}" AND description ~ "i-d034817b"'
+    JIRA_COMMENT_TEMPLATE = '{instance_name}\r\n\r\nPlease schedule Icinga downtime from {start_time} to {end_time}.'
 
     def __init__(self):
         ### Call superclass to get krux-stdlib
@@ -153,14 +154,23 @@ class Application(krux_boto.Application):
         log   = self.logger
         stats = self.stats
 
-        yesterday_str = (date.today() - timedelta(30)).isoformat()
+        yesterday_str = (date.today() - timedelta(15)).isoformat()
         issues = self._jira.search_issues(self.JQL_TEMPLATE.format(instance_id=instance.id, yesterday=yesterday_str))
 
         for issue in issues:
             # GOTCHA: This is kinda dumb, but Jira does not return the comments when issues are searched
             # Thus, the comments for each issue have to be pulled separately
             comments = self._jira.comments(issue)
-            print issue, [(c.author, c.body) for c in comments], instance.tags['Name']
+
+            if len([c for c in comments if instance.tags['Name'] in c.body]) < 1:
+                self._jira.add_comment(
+                    issue=issue.id,
+                    body=self.JIRA_COMMENT_TEMPLATE.format(
+                        instance_name=instance.tags['Name'],
+                        start_time=event.not_before,
+                        end_time=event.not_after
+                    )
+                )
 
     def _get_instance_by_id(self, ec2, id):
         """
