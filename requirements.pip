@@ -16,7 +16,12 @@ greenlet==0.4.5
 ### Flowdock integration
 ###
 pyflowdock==0.3.35
-requests==2.3.0
+requests==2.9.1
+
+###
+### Jira integration
+###
+jira==0.50
 
 ###
 ### Transitive dependencies for krux-boto
@@ -62,3 +67,9 @@ pygerduty==0.25
 smmap==0.8.2
 watchdog==0.8.3
 wsgiref==0.1.2
+requests-oauthlib==0.6.0
+requests-toolbelt==0.6.0
+tlslite==0.4.9
+six==1.10.0
+oauthlib==1.0.3
+ordereddict==1.1

@@ -32,11 +32,14 @@ import krux_boto
 
 import boto.exception
 import flowdock
+from jira import JIRA
 
 
 class Application(krux_boto.Application):
     COMPLETED = 'Completed'
     CANCELED  = 'Canceled'
+
+    JQL_TEMPLATE = 'description ~ "{instance_id}"'
 
     def __init__(self):
         ### Call superclass to get krux-stdlib
@@ -44,6 +47,9 @@ class Application(krux_boto.Application):
 
         ### Integrate with flowdock?
         self._flowdock = flowdock.Chat(self.args.flowdock) if self.args.flowdock else None
+
+        ### Integrate with Jira?
+        self._jira = JIRA('https://kruxdigital.jira.com')
 
     def add_cli_arguments(self, parser):
 
@@ -107,6 +113,10 @@ class Application(krux_boto.Application):
 
                         ### and log them here so we can send them elsewhere too
                         events.append(message)
+
+                        print self._jira.search_issues(
+                            self.JQL_TEMPLATE.format(instance_id=instance.id)
+                        )
 
         ### post to flowdock as well?
         if len(events) and self._flowdock:
