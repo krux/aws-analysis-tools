@@ -40,7 +40,7 @@ class Application(krux_boto.Application):
     COMPLETED = 'Completed'
     CANCELED  = 'Canceled'
 
-    JQL_TEMPLATE = 'description ~ "{instance_id}" AND type = "Maintenance Task" AND createdDate >= "{yesterday}" AND description ~ "i-d034817b"'
+    JQL_TEMPLATE = 'description ~ "{instance_id}" AND type = "Maintenance Task" AND createdDate >= "{yesterday}"'
     JIRA_COMMENT_TEMPLATE = '{instance_name}\r\n\r\nPlease schedule Icinga downtime from {start_time} to {end_time}.'
 
     def __init__(self):
