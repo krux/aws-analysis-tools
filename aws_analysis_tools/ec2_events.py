@@ -18,7 +18,6 @@ from __future__ import absolute_import
 import sys
 
 from pprint import pprint, pformat
-from datetime import date, timedelta
 
 ######################
 ### Krux Libraries ###
@@ -34,6 +33,7 @@ import krux_boto
 import boto.exception
 import flowdock
 from jira import JIRA
+from DateTime import DateTime
 
 
 class Application(krux_boto.Application):
@@ -154,7 +154,7 @@ class Application(krux_boto.Application):
         log   = self.logger
         stats = self.stats
 
-        yesterday_str = (date.today() - timedelta(15)).isoformat()
+        yesterday_str = (DateTime() - 1).Date()
         issues = self._jira.search_issues(self.JQL_TEMPLATE.format(instance_id=instance.id, yesterday=yesterday_str))
 
         for issue in issues:
@@ -163,12 +163,15 @@ class Application(krux_boto.Application):
             comments = self._jira.comments(issue)
 
             if len([c for c in comments if instance.tags['Name'] in c.body]) < 1:
+                start_time = DateTime(event.not_before)
+                end_time = DateTime(event.not_after)
                 self._jira.add_comment(
                     issue=issue.id,
                     body=self.JIRA_COMMENT_TEMPLATE.format(
                         instance_name=instance.tags['Name'],
-                        start_time=event.not_before,
-                        end_time=event.not_after
+                        # GOTCHA: Change the time to PST for easier calculation
+                        start_time=str(start_time.toZone('PST')),
+                        end_time=str(end_time.toZone('PST'))
                     )
                 )
 
