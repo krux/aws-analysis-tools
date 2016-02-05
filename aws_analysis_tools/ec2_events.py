@@ -116,7 +116,7 @@ class Application(krux_boto.Application):
                         ### and log them here so we can send them elsewhere too
                         events.append(message)
 
-                        self._format_event_jira(instance, status, event)
+                        self._add_jira_comment(instance, status, event)
 
         ### post to flowdock as well?
         if len(events) and self._flowdock:
@@ -150,7 +150,7 @@ class Application(krux_boto.Application):
 
         return message
 
-    def _format_event_jira(self, instance, status, event):
+    def _add_jira_comment(self, instance, status, event):
         log   = self.logger
         stats = self.stats
 
