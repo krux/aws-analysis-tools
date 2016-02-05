@@ -151,11 +151,14 @@ class Application(krux_boto.Application):
         return message
 
     def _add_jira_comment(self, instance, status, event):
-        log   = self.logger
+        log = self.logger
         stats = self.stats
 
         yesterday_str = (DateTime() - 1).Date()
-        issues = self._jira.search_issues(self.JQL_TEMPLATE.format(instance_id=instance.id, yesterday=yesterday_str))
+        jql_search = self.JQL_TEMPLATE.format(instance_id=instance.id, yesterday=yesterday_str)
+        issues = self._jira.search_issues(jql_search)
+
+        log.debug('Found %s issues that matches the JQL search: %s', len(issues), jql_search)
 
         for issue in issues:
             # GOTCHA: This is kinda dumb, but Jira does not return the comments when issues are searched
@@ -163,17 +166,20 @@ class Application(krux_boto.Application):
             comments = self._jira.comments(issue)
 
             if len([c for c in comments if instance.tags['Name'] in c.body]) < 1:
+                log.debug('Determined issue %s needs a comment', issue.key)
+
                 start_time = DateTime(event.not_before)
                 end_time = DateTime(event.not_after)
-                self._jira.add_comment(
-                    issue=issue.id,
-                    body=self.JIRA_COMMENT_TEMPLATE.format(
-                        instance_name=instance.tags['Name'],
-                        # GOTCHA: Change the time to PST for easier calculation
-                        start_time=str(start_time.toZone('PST')),
-                        end_time=str(end_time.toZone('PST'))
-                    )
+                body = self.JIRA_COMMENT_TEMPLATE.format(
+                    instance_name=instance.tags['Name'],
+                    # GOTCHA: Change the time to PST for easier calculation
+                    start_time=str(start_time.toZone('PST')),
+                    end_time=str(end_time.toZone('PST')),
                 )
+
+                self._jira.add_comment(issue=issue.id, body=body)
+
+                log.info('Added comment to issue %s: %s', issue.key, body)
 
     def _get_instance_by_id(self, ec2, id):
         """
