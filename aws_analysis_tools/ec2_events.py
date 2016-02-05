@@ -51,7 +51,13 @@ class Application(krux_boto.Application):
         self._flowdock = flowdock.Chat(self.args.flowdock) if self.args.flowdock else None
 
         ### Integrate with Jira?
-        self._jira = JIRA('https://kruxdigital.jira.com')
+        if self.args.jira_username is not None:
+            self._jira = JIRA(
+                server='https://kruxdigital.jira.com',
+                basic_auth=(self.args.jira_username, self.args.jira_password),
+            )
+        else:
+            self._jira = None
 
     def add_cli_arguments(self, parser):
 
@@ -65,7 +71,21 @@ class Application(krux_boto.Application):
             '--flowdock',
             type    = str,
             help    = "Flowdock API token. If provided, will post to Flowdock",
-            default = None
+            default = None,
+        )
+
+        group.add_argument(
+            '--jira-username',
+            type    = str,
+            help    = 'Username to login to Jira. If provided, will add a comment to Jira tickets',
+            default = None,
+        )
+
+        group.add_argument(
+            '--jira-password',
+            type    = str,
+            help    = 'Password for the Jira user.',
+            default = None,
         )
 
     def run(self):
@@ -79,6 +99,9 @@ class Application(krux_boto.Application):
         ### of all regions, then connect to all the regions to
         ### get their status.
         log.debug('Connected to region: %s', region.name)
+
+        if self._jira is not None:
+            log.debug('Logged into Jira as %s', self._jira.current_user())
 
         events = [ ]
         for r in ec2.get_all_regions():
@@ -116,7 +139,8 @@ class Application(krux_boto.Application):
                         ### and log them here so we can send them elsewhere too
                         events.append(message)
 
-                        self._add_jira_comment(instance, status, event)
+                        if self._jira is not None:
+                            self._add_jira_comment(instance, status, event)
 
         ### post to flowdock as well?
         if len(events) and self._flowdock:
