@@ -32,11 +32,16 @@ import krux_boto
 
 import boto.exception
 import flowdock
+from jira import JIRA
+from DateTime import DateTime
 
 
 class Application(krux_boto.Application):
     COMPLETED = 'Completed'
     CANCELED  = 'Canceled'
+
+    JQL_TEMPLATE = 'description ~ "{instance_id}" AND type = "Maintenance Task" AND createdDate >= "{yesterday}"'
+    JIRA_COMMENT_TEMPLATE = '{instance_name}\r\n\r\nPlease schedule Icinga downtime from {start_time} to {end_time}.'
 
     def __init__(self):
         ### Call superclass to get krux-stdlib
@@ -44,6 +49,15 @@ class Application(krux_boto.Application):
 
         ### Integrate with flowdock?
         self._flowdock = flowdock.Chat(self.args.flowdock) if self.args.flowdock else None
+
+        ### Integrate with Jira?
+        if self.args.jira_username is not None:
+            self._jira = JIRA(
+                server='https://kruxdigital.jira.com',
+                basic_auth=(self.args.jira_username, self.args.jira_password),
+            )
+        else:
+            self._jira = None
 
     def add_cli_arguments(self, parser):
 
@@ -57,7 +71,21 @@ class Application(krux_boto.Application):
             '--flowdock',
             type    = str,
             help    = "Flowdock API token. If provided, will post to Flowdock",
-            default = None
+            default = None,
+        )
+
+        group.add_argument(
+            '--jira-username',
+            type    = str,
+            help    = 'Username to login to Jira. If provided, will add a comment to Jira tickets',
+            default = None,
+        )
+
+        group.add_argument(
+            '--jira-password',
+            type    = str,
+            help    = 'Password for the Jira user.',
+            default = None,
         )
 
     def run(self):
@@ -71,6 +99,9 @@ class Application(krux_boto.Application):
         ### of all regions, then connect to all the regions to
         ### get their status.
         log.debug('Connected to region: %s', region.name)
+
+        if self._jira is not None:
+            log.debug('Logged into Jira as %s', self._jira.current_user())
 
         events = [ ]
         for r in ec2.get_all_regions():
@@ -108,6 +139,9 @@ class Application(krux_boto.Application):
                         ### and log them here so we can send them elsewhere too
                         events.append(message)
 
+                        if self._jira is not None:
+                            self._add_jira_comment(instance, status, event)
+
         ### post to flowdock as well?
         if len(events) and self._flowdock:
             self._flowdock.post(
@@ -140,15 +174,43 @@ class Application(krux_boto.Application):
 
         return message
 
+    def _add_jira_comment(self, instance, status, event):
+        log = self.logger
+        stats = self.stats
+
+        yesterday_str = (DateTime() - 1).Date()
+        jql_search = self.JQL_TEMPLATE.format(instance_id=instance.id, yesterday=yesterday_str)
+        issues = self._jira.search_issues(jql_search)
+
+        log.debug('Found %s issues that matches the JQL search: %s', len(issues), jql_search)
+
+        for issue in issues:
+            # GOTCHA: This is kinda dumb, but Jira does not return the comments when issues are searched
+            # Thus, the comments for each issue have to be pulled separately
+            comments = self._jira.comments(issue)
+
+            if len([c for c in comments if instance.tags['Name'] in c.body]) < 1:
+                log.debug('Determined issue %s needs a comment', issue.key)
+
+                start_time = DateTime(event.not_before)
+                end_time = DateTime(event.not_after)
+                body = self.JIRA_COMMENT_TEMPLATE.format(
+                    instance_name=instance.tags['Name'],
+                    # GOTCHA: Change the time to PST for easier calculation
+                    start_time=str(start_time.toZone('PST')),
+                    end_time=str(end_time.toZone('PST')),
+                )
+
+                self._jira.add_comment(issue=issue.id, body=body)
+
+                log.info('Added comment to issue %s: %s', issue.key, body)
+
     def _get_instance_by_id(self, ec2, id):
         """
         Boto/AWS are silly, and you have to jump through this hoop
         to get an instance object
         """
-        res  = ec2.get_all_instances(instance_ids = [id])
-        inst = res[0].instances[0]
-
-        return inst
+        return ec2.get_only_instances(instance_ids = [id])[0]
 
 def main():
     app = Application()
