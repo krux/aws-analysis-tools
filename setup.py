@@ -56,7 +56,7 @@ setup(
             'krux-ec2-instances      = aws_analysis_tools.cli.instances:list_instances',
             'krux-ec2-pssh           = aws_analysis_tools.cli.pssh:main',
             'krux-ec2-pssh2          = aws_analysis_tools.cli.pssh2:main',
-            'krux-ec2-events         = aws_analysis_tools.ec2_events.ec2_events:main',
+            'krux-ec2-events         = aws_analysis_tools.ec2_events.cli:main',
             'krux-ec2-test-provision = aws_analysis_tools.cli.test_provision:main',
         ],
     },
