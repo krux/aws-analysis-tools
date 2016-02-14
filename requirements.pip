@@ -9,7 +9,7 @@ texttable==0.8.4
 colorama==0.3.3
 docopt==0.6.2
 reversefold.util==1.0.4
-eventlet==0.17.1
+eventlet==0.17.4
 greenlet==0.4.5
 
 ###
