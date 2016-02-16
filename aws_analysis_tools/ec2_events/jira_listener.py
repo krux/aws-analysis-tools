@@ -98,7 +98,7 @@ class JiraListener(object):
             self._comment_issue(issue, instance.tags['Name'], event)
 
     def _find_issues(self, instance):
-        yesterday_str = (DateTime() - 30).Date()
+        yesterday_str = (DateTime() - 1).Date()
         jql_search = self.JQL_TEMPLATE.format(instance_id=instance.id, yesterday=yesterday_str)
 
         res = self._request(
@@ -124,7 +124,7 @@ class JiraListener(object):
         )
         comments = comments_res['comments']
 
-        if len([c for c in comments if instance_name in c['body']]) < 100:
+        if len([c for c in comments if instance_name in c['body']]) < 1:
             self._logger.debug('Determined issue %s needs a comment', issue['key'])
 
             start_time = DateTime(event.not_before)
