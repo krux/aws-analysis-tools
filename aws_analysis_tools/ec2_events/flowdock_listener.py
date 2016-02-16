@@ -24,7 +24,7 @@ from krux.stats import get_stats
 from krux.cli import get_group
 
 
-NAME = 'flockdock-li'
+NAME = 'flockdock-listener'
 
 
 def add_flowdock_listener_cli_arguments(parser):
