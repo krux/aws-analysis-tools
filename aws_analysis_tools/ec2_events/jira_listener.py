@@ -49,9 +49,13 @@ def add_jira_listener_cli_argumemts(parser):
 
 class JiraListener(object):
 
-    URL_TEMPLATE = 'https://kruxdigital.jira.com/{url}'
+    URL_TEMPLATES = {
+        'base': 'https://kruxdigital.jira.com/{url}',
+        'search': '/rest/api/2/search',
+        'comment': '/rest/api/2/issue/{issue}/comment',
+    }
     JQL_TEMPLATE = 'description ~ "{instance_id}" AND type = "Maintenance Task" AND createdDate >= "{yesterday}"'
-    JIRA_COMMENT_TEMPLATE = '{instance_name}\r\n\r\nPlease schedule Icinga downtime from {start_time} to {end_time}.'
+    COMMENT_TEMPLATE = '{instance_name}\r\n\r\nPlease schedule Icinga downtime from {start_time} to {end_time}.'
 
     def __init__(
         self,
@@ -75,7 +79,7 @@ class JiraListener(object):
     def _request(self, **kwarg):
         kwarg['headers'] = self._headers
         kwarg['auth'] = self._auth
-        kwarg['url'] = self.URL_TEMPLATE.format(url=kwarg['url'])
+        kwarg['url'] = self.URL_TEMPLATES['base'].format(url=kwarg['url'])
 
         res = request(**kwarg)
 
@@ -88,7 +92,10 @@ class JiraListener(object):
         return res.json()
 
     def handle_event(self, instance, event):
-        print self._find_issues(instance)
+        issues = self._find_issues(instance)
+
+        for issue in issues:
+            self._comment_issue(issue, instance.tags['Name'], event)
 
     def _find_issues(self, instance):
         yesterday_str = (DateTime() - 30).Date()
@@ -96,17 +103,42 @@ class JiraListener(object):
 
         res = self._request(
             method='POST',
-            url='/rest/api/2/search',
+            url=self.URL_TEMPLATES['search'],
             json={
                 'jql': jql_search,
                 'fields': [],
             },
         )
 
-        issues = res.json()['issues']
+        issues = res['issues']
         self._logger.debug('Found %s issues that matches the JQL search: %s', len(issues), jql_search)
 
         return issues
+
+    def _comment_issue(self, issue, instance_name, event):
+        # GOTCHA: This is kinda dumb, but Jira does not return the comments when issues are searched
+        # Thus, the comments for each issue have to be pulled separately
+        comments_res = self._request(
+            method='GET',
+            url=self.URL_TEMPLATES['comment'].format(issue=issue['key'])
+        )
+        comments = comments_res['comments']
+
+        if len([c for c in comments if instance_name in c['body']]) < 100:
+            self._logger.debug('Determined issue %s needs a comment', issue['key'])
+
+            start_time = DateTime(event.not_before)
+            end_time = DateTime(event.not_after) if event.not_after is not None else DateTime(9999, 12, 31)
+            body = self.COMMENT_TEMPLATE.format(
+                instance_name=instance_name,
+                # GOTCHA: Change the time to PST for easier calculation
+                start_time=str(start_time.toZone('PST')),
+                end_time=str(end_time.toZone('PST')),
+            )
+
+            #self._jira.add_comment(issue=issue.id, body=body)
+
+            self._logger.info('Added comment to issue %s: %s', issue['key'], body)
 
     def handle_complete(self):
         pass
