@@ -49,7 +49,7 @@ def add_jira_listener_cli_argumemts(parser):
 
 class JiraListener(object):
 
-    BASE_URL_TEMPLATE = 'https://'
+    URL_TEMPLATE = 'https://kruxdigital.jira.com/{url}'
     JQL_TEMPLATE = 'description ~ "{instance_id}" AND type = "Maintenance Task" AND createdDate >= "{yesterday}"'
     JIRA_COMMENT_TEMPLATE = '{instance_name}\r\n\r\nPlease schedule Icinga downtime from {start_time} to {end_time}.'
 
@@ -72,6 +72,21 @@ class JiraListener(object):
         }
         self._auth = (username, password)
 
+    def _request(self, **kwarg):
+        kwarg['headers'] = self._headers
+        kwarg['auth'] = self._auth
+        kwarg['url'] = self.URL_TEMPLATE.format(url=kwarg['url'])
+
+        res = request(**kwarg)
+
+        if res.status_code > 299 or res.status_code < 200:
+            raise ValueError(
+                'Something went wrong. {status_code} {reason} was returned. Body: {body}'
+                .format(status_code=res.status_code, reason=res.reason, body=res.content)
+            )
+
+        return res.json()
+
     def handle_event(self, instance, event):
         print self._find_issues(instance)
 
@@ -79,22 +94,14 @@ class JiraListener(object):
         yesterday_str = (DateTime() - 30).Date()
         jql_search = self.JQL_TEMPLATE.format(instance_id=instance.id, yesterday=yesterday_str)
 
-        res = request(
+        res = self._request(
             method='POST',
-            url='https://kruxdigital.jira.com/rest/api/2/search',
-            headers=self._headers,
-            auth=self._auth,
+            url='/rest/api/2/search',
             json={
                 'jql': jql_search,
                 'fields': [],
             },
         )
-
-        if res.status_code > 299 or res.status_code < 200:
-            raise ValueError(
-                'Something went wrong. {status_code} {reason} was returned. Body: {body}'
-                .format(status_code=res.status_code, reason=res.reason, body=res.content)
-            )
 
         issues = res.json()['issues']
         self._logger.debug('Found %s issues that matches the JQL search: %s', len(issues), jql_search)
