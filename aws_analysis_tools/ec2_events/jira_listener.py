@@ -136,7 +136,13 @@ class JiraListener(object):
                 end_time=str(end_time.toZone('PST')),
             )
 
-            #self._jira.add_comment(issue=issue.id, body=body)
+            self._request(
+                method='POST',
+                url=self.URL_TEMPLATES['comment'].format(issue=issue['key']),
+                json={
+                    'body': body
+                }
+            )
 
             self._logger.info('Added comment to issue %s: %s', issue['key'], body)
 
