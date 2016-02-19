@@ -47,6 +47,7 @@ class Application(krux_boto.Application):
             self._checker.add_listener(JiraListener(
                 username=self.args.jira_username,
                 password=self.args.jira_password,
+                base_url=self.args.jira_base_url,
                 name=name,
                 logger=self.logger,
                 stats=self.stats,

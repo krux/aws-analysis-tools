@@ -27,6 +27,7 @@ from krux.cli import get_group
 
 
 NAME = 'jira-listener'
+KRUX_JIRA_URL = 'https://kruxdigital.jira.com/'
 
 
 def add_jira_listener_cli_argumemts(parser):
@@ -46,11 +47,17 @@ def add_jira_listener_cli_argumemts(parser):
         default=None,
     )
 
+    group.add_argument(
+        '--jira-base-url',
+        type=str,
+        help='Base URL (domain) of the JIRA for the organization. (default: %(default)s)',
+        default=KRUX_JIRA_URL,
+    )
+
 
 class JiraListener(object):
 
     URL_TEMPLATES = {
-        'base': 'https://kruxdigital.jira.com/{url}',
         'search': '/rest/api/2/search',
         'comment': '/rest/api/2/issue/{issue}/comment',
     }
@@ -61,6 +68,7 @@ class JiraListener(object):
         self,
         username,
         password,
+        base_url=KRUX_JIRA_URL,
         name=NAME,
         logger=None,
         stats=None,
@@ -75,11 +83,12 @@ class JiraListener(object):
             'Accept': 'application/json',
         }
         self._auth = (username, password)
+        self._base_url = base_url
 
     def _request(self, **kwarg):
         kwarg['headers'] = self._headers
         kwarg['auth'] = self._auth
-        kwarg['url'] = self.URL_TEMPLATES['base'].format(url=kwarg['url'])
+        kwarg['url'] = self._base_url + kwarg['url']
 
         res = request(**kwarg)
 
