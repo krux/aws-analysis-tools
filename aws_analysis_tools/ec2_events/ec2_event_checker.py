@@ -23,9 +23,14 @@ import boto
 import krux_boto
 from krux.logging import get_logger
 from krux.stats import get_stats
+from krux.cli import get_group
 
 
 NAME = 'ec2-event-checker'
+
+
+def add_ec2_event_checker_cli_arguments(parser):
+    group = get_group(parser, NAME)
 
 
 class EC2EventChecker(object):
@@ -36,11 +41,12 @@ class EC2EventChecker(object):
     def __init__(
         self,
         boto,
+        name=NAME,
         logger=None,
         stats=None,
     ):
         # Private variables, not to be used outside this module
-        self._name = NAME
+        self._name = name
         self._logger = logger or get_logger(self._name)
         self._stats = stats or get_stats(prefix=self._name)
 
