@@ -131,9 +131,10 @@ class JiraListener(object):
             end_time = DateTime(event.not_after) if event.not_after is not None else DateTime(9999, 12, 31)
             body = self.COMMENT_TEMPLATE.format(
                 instance_name=instance_name,
-                # GOTCHA: Change the time to PST for easier calculation
-                start_time=str(start_time.toZone('PST')),
-                end_time=str(end_time.toZone('PST')),
+                # GOTCHA: Change the time to Pacific time for easier calculation
+                # This should handle Daylight Savings Time graciously on its own
+                start_time=str(start_time.toZone('US/Pacific')),
+                end_time=str(end_time.toZone('US/Pacific')),
             )
 
             self._request(
