@@ -26,9 +26,9 @@ from aws_analysis_tools.ec2_events.ec2_event_checker import EC2EventChecker
 
 
 class EC2EventCheckerTest(unittest.TestCase):
-    GOOD_REGION = 'test-region-1'
-    BAD_REGIONS = ['cn-test-region-2', 'test-gov-region-3']
-    GOOD_DESCRIPTION = 'scheduled reboot'
+    GOOD_REGIONS = ['test-region-1', 'test-region-2']
+    BAD_REGIONS = ['cn-test-region-3', 'test-gov-region-4']
+    GOOD_DESCRIPTIONS = ['scheduled reboot', 'Your instance will experience a loss of network connectivity.']
     BAD_DESCRIPTIONS = ['[Completed]', '[Canceled]']
     INSTANCE_NAME = 'unit-test.krxd.net'
 
@@ -55,21 +55,26 @@ class EC2EventCheckerTest(unittest.TestCase):
             self._checker.add_listener(listener)
 
     @staticmethod
-    def _get_ec2(region=GOOD_REGION):
-        mock_region = MagicMock()
-        mock_region.name = region
+    def _get_ec2(regions=GOOD_REGIONS):
+        mock_regions = []
+        for region in regions:
+            mock_region = MagicMock()
+            mock_region.name = region
+            mock_regions.append(mock_region)
 
         return MagicMock(
             regions=MagicMock(
-                return_value=[mock_region],
+                return_value=mock_regions,
             ),
         )
 
     @staticmethod
-    def _get_connection(event_desc=GOOD_DESCRIPTION, instance_name=INSTANCE_NAME):
+    def _get_connection(event_descs=GOOD_DESCRIPTIONS, instance_name=INSTANCE_NAME):
         return MagicMock(
             get_all_instance_status=MagicMock(
-                return_value=[MagicMock(events=[MagicMock(description=event_desc)])]
+                return_value=[MagicMock(events=[
+                    MagicMock(description=desc) for desc in event_descs
+                ])]
             ),
             get_only_instances=MagicMock(
                 return_value=[MagicMock(tags={'Name': instance_name})]
@@ -92,14 +97,11 @@ class EC2EventCheckerTest(unittest.TestCase):
             listener.handle_complete.assert_called_once_with()
 
     def test_check_bad_regions(self):
-        for region in self.BAD_REGIONS:
-            self._boto.ec2=EC2EventCheckerTest._get_ec2(region=region)
+        self._boto.ec2=EC2EventCheckerTest._get_ec2(regions=self.BAD_REGIONS)
 
-            self._checker.check()
+        self._checker.check()
 
-            self.assertEqual([], self._logger.debug.call_args_list)
-
-            self._logger.reset_mock()
+        self.assertEqual([], self._logger.debug.call_args_list)
 
     def test_check_bad_event_call(self):
         err = EC2ResponseError(500, 'Unit test', 'This error was intentionally generated for unit test.')
@@ -107,14 +109,10 @@ class EC2EventCheckerTest(unittest.TestCase):
 
         self._checker.check()
 
-        debug_calls = [
-            (('Checking region: %s', self.GOOD_REGION),),
-        ]
+        debug_calls = [(('Checking region: %s', region),) for region in self.GOOD_REGIONS]
         self.assertEqual(debug_calls, self._logger.debug.call_args_list)
 
-        error_calls = [
-            (('Unable to query region %r due to %r', self.GOOD_REGION, err),),
-        ]
+        error_calls = [(('Unable to query region %r due to %r', region, err),) for region in self.GOOD_REGIONS]
         self.assertEqual(error_calls, self._logger.error.call_args_list)
 
     def test_check_no_events(self):
@@ -124,29 +122,25 @@ class EC2EventCheckerTest(unittest.TestCase):
 
         self._checker.check()
 
-        debug_calls = [
-            (('Checking region: %s', self.GOOD_REGION),),
-        ]
+        debug_calls = [(('Checking region: %s', region),) for region in self.GOOD_REGIONS]
         self.assertEqual(debug_calls, self._logger.debug.call_args_list)
 
     def test_check_bad_events(self):
-        for desc in self.BAD_DESCRIPTIONS:
-            self._boto.connect_ec2.return_value=EC2EventCheckerTest._get_connection(event_desc=desc)
+        self._boto.connect_ec2.return_value=EC2EventCheckerTest._get_connection(event_descs=self.BAD_DESCRIPTIONS)
 
-            self._checker.check()
+        self._checker.check()
 
-            debug_calls = [
-                (('Checking region: %s', self.GOOD_REGION),),
-            ]
-            self.assertEqual(debug_calls, self._logger.debug.call_args_list)
-
-            self._logger.reset_mock()
+        debug_calls = [(('Checking region: %s', region),) for region in self.GOOD_REGIONS]
+        self.assertEqual(debug_calls, self._logger.debug.call_args_list)
 
     def test_check_pass(self):
         self._checker.check()
 
-        debug_calls = [
-            (('Checking region: %s', self.GOOD_REGION),),
-            (('Found following event: %s => %s', self.INSTANCE_NAME, self.GOOD_DESCRIPTION),),
-        ]
+        debug_calls = []
+        for region in self.GOOD_REGIONS:
+            debug_calls.append((('Checking region: %s', region),))
+
+            for desc in self.GOOD_DESCRIPTIONS:
+                debug_calls.append((('Found following event: %s => %s', self.INSTANCE_NAME, desc),))
+
         self.assertEqual(debug_calls, self._logger.debug.call_args_list)
