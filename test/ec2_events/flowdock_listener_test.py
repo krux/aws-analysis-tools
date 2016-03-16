@@ -9,7 +9,6 @@
 
 from __future__ import absolute_import
 import unittest
-from logging import Logger
 
 #
 # Third party libraries
@@ -21,29 +20,38 @@ from mock import MagicMock, patch
 # Internal libraries
 #
 
-from aws_analysis_tools.ec2_events.ec2_event_checker import EC2EventChecker
+from aws_analysis_tools.ec2_events.flowdock_listener import FlowdockListener
 
 
 class FlowdockListenerTest(unittest.TestCase):
+    NAME = 'fake-unit-test-application'
+    FLOW_TOKEN = 'fake-flow-token'
 
     def setUp(self):
-        self._boto = MagicMock(
-            ec2=EC2EventCheckerTest._get_ec2(),
-            connect_ec2=MagicMock(
-                return_value=self._get_connection()
-            ),
+        self._stats = MagicMock()
+
+        self._flowdock = MagicMock()
+        self._flowdock_lib = MagicMock(
+            Chat=MagicMock(
+                return_value=self._flowdock
+            )
         )
 
-        self._logger = MagicMock(
-            spec=Logger,
-            autospec=True,
-        )
+        with patch('aws_analysis_tools.ec2_events.flowdock_listener.flowdock', self._flowdock_lib):
+            self._listener = FlowdockListener(
+                flow_token = self.FLOW_TOKEN,
+                name = self.NAME,
+                stats = self._stats,
+            )
 
-        self._checker = EC2EventChecker(
-            boto=self._boto,
-            logger=self._logger,
-        )
+    def test_init(self):
+        """
+        Flowdock object is created with passed in token
+        """
+        self._flowdock_lib.Chat.assert_called_once_with(self.FLOW_TOKEN)
 
-        self._listeners = [MagicMock(), MagicMock()]
-        for listener in self._listeners:
-            self._checker.add_listener(listener)
+    def test_handle_event(self):
+        pass
+
+    def test_handle_complete(self):
+        pass
