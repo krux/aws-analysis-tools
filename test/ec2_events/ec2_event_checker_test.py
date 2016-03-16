@@ -9,7 +9,6 @@
 
 from __future__ import absolute_import
 import unittest
-from logging import Logger
 
 #
 # Third party libraries
@@ -42,10 +41,7 @@ class EC2EventCheckerTest(unittest.TestCase):
         )
 
         # Set up a mock logger. This is used to verify code execution
-        self._logger = MagicMock(
-            spec=Logger,
-            autospec=True,
-        )
+        self._logger = MagicMock()
 
         # Set up the checker to be tested
         self._checker = EC2EventChecker(
