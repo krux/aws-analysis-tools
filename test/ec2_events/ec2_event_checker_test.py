@@ -36,7 +36,7 @@ class EC2EventCheckerTest(unittest.TestCase):
         self._boto = MagicMock(
             ec2=EC2EventCheckerTest._get_ec2(),
             connect_ec2=MagicMock(
-                return_value=EC2EventCheckerTest._get_connection()
+                return_value=self._get_connection()
             ),
         )
 
@@ -68,23 +68,22 @@ class EC2EventCheckerTest(unittest.TestCase):
             ),
         )
 
-    @staticmethod
-    def _get_connection(event_descs=GOOD_DESCRIPTIONS, instance_name=INSTANCE_NAME):
+    def _get_connection(self, event_descs=GOOD_DESCRIPTIONS, instance_name=INSTANCE_NAME):
+        self._instance = MagicMock(tags={'Name': instance_name})
+        self._events = [MagicMock(description=desc) for desc in event_descs]
+
         return MagicMock(
             get_all_instance_status=MagicMock(
-                return_value=[MagicMock(events=[
-                    MagicMock(description=desc) for desc in event_descs
-                ])]
+                return_value=[MagicMock(events=self._events)]
             ),
             get_only_instances=MagicMock(
-                return_value=[MagicMock(tags={'Name': instance_name})]
+                return_value=[self._instance]
             )
         )
 
     def test_notify_event(self):
         mock_instance = 'instance'
         mock_event = 'event'
-
         self._checker.notify_event(mock_instance, mock_event)
 
         for listener in self._listeners:
@@ -126,7 +125,7 @@ class EC2EventCheckerTest(unittest.TestCase):
         self.assertEqual(debug_calls, self._logger.debug.call_args_list)
 
     def test_check_bad_events(self):
-        self._boto.connect_ec2.return_value=EC2EventCheckerTest._get_connection(event_descs=self.BAD_DESCRIPTIONS)
+        self._boto.connect_ec2.return_value = self._get_connection(event_descs=self.BAD_DESCRIPTIONS)
 
         self._checker.check()
 
@@ -137,10 +136,18 @@ class EC2EventCheckerTest(unittest.TestCase):
         self._checker.check()
 
         debug_calls = []
+        event_calls = []
         for region in self.GOOD_REGIONS:
             debug_calls.append((('Checking region: %s', region),))
 
             for desc in self.GOOD_DESCRIPTIONS:
                 debug_calls.append((('Found following event: %s => %s', self.INSTANCE_NAME, desc),))
 
+            for event in self._events:
+                event_calls.append(((self._instance, event),))
+
         self.assertEqual(debug_calls, self._logger.debug.call_args_list)
+
+        for listener in self._listeners:
+            self.assertEqual(event_calls, listener.handle_event.call_args_list)
+            listener.handle_complete.assert_called_once_with()
