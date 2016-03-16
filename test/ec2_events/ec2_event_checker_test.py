@@ -50,6 +50,10 @@ class EC2EventCheckerTest(unittest.TestCase):
             logger=self._logger,
         )
 
+        self._listeners = [MagicMock(), MagicMock()]
+        for listener in self._listeners:
+            self._checker.add_listener(listener)
+
     @staticmethod
     def _get_ec2(region=GOOD_REGION):
         mock_region = MagicMock()
@@ -72,14 +76,20 @@ class EC2EventCheckerTest(unittest.TestCase):
             )
         )
 
-    def test_add_listener(self):
-        pass
-
     def test_notify_event(self):
-        pass
+        mock_instance = 'instance'
+        mock_event = 'event'
+
+        self._checker.notify_event(mock_instance, mock_event)
+
+        for listener in self._listeners:
+            listener.handle_event.assert_called_once_with(mock_instance, mock_event)
 
     def test_notify_complete(self):
-        pass
+        self._checker.notify_complete()
+
+        for listener in self._listeners:
+            listener.handle_complete.assert_called_once_with()
 
     def test_check_bad_regions(self):
         for region in self.BAD_REGIONS:
