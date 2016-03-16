@@ -100,6 +100,9 @@ class EC2EventCheckerTest(unittest.TestCase):
 
         self.assertEqual([], self._logger.debug.call_args_list)
 
+        for listener in self._listeners:
+            listener.handle_complete.assert_called_once_with()
+
     def test_check_bad_event_call(self):
         err = EC2ResponseError(500, 'Unit test', 'This error was intentionally generated for unit test.')
         self._boto.connect_ec2.return_value.get_all_instance_status.side_effect=err
@@ -112,6 +115,9 @@ class EC2EventCheckerTest(unittest.TestCase):
         error_calls = [(('Unable to query region %r due to %r', region, err),) for region in self.GOOD_REGIONS]
         self.assertEqual(error_calls, self._logger.error.call_args_list)
 
+        for listener in self._listeners:
+            listener.handle_complete.assert_called_once_with()
+
     def test_check_no_events(self):
         self._boto.connect_ec2.return_value.get_all_instance_status.return_value = [
             MagicMock(events=[])
@@ -122,6 +128,9 @@ class EC2EventCheckerTest(unittest.TestCase):
         debug_calls = [(('Checking region: %s', region),) for region in self.GOOD_REGIONS]
         self.assertEqual(debug_calls, self._logger.debug.call_args_list)
 
+        for listener in self._listeners:
+            listener.handle_complete.assert_called_once_with()
+
     def test_check_bad_events(self):
         self._boto.connect_ec2.return_value = self._get_connection(event_descs=self.BAD_DESCRIPTIONS)
 
@@ -129,6 +138,9 @@ class EC2EventCheckerTest(unittest.TestCase):
 
         debug_calls = [(('Checking region: %s', region),) for region in self.GOOD_REGIONS]
         self.assertEqual(debug_calls, self._logger.debug.call_args_list)
+
+        for listener in self._listeners:
+            listener.handle_complete.assert_called_once_with()
 
     def test_check_pass(self):
         self._checker.check()
