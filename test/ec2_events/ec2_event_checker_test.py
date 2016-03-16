@@ -82,12 +82,10 @@ class EC2EventCheckerTest(unittest.TestCase):
         )
 
     def test_notify_event(self):
-        mock_instance = 'instance'
-        mock_event = 'event'
-        self._checker.notify_event(mock_instance, mock_event)
+        self._checker.notify_event(self._instance, self._events[0])
 
         for listener in self._listeners:
-            listener.handle_event.assert_called_once_with(mock_instance, mock_event)
+            listener.handle_event.assert_called_once_with(self._instance, self._events[0])
 
     def test_notify_complete(self):
         self._checker.notify_complete()
