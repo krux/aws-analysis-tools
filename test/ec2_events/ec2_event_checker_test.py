@@ -16,6 +16,7 @@ from logging import Logger
 #
 
 from mock import MagicMock, patch
+from boto.exception import EC2ResponseError
 
 #
 # Internal libraries
@@ -89,6 +90,22 @@ class EC2EventCheckerTest(unittest.TestCase):
             self.assertEqual([], self._logger.debug.call_args_list)
 
             self._logger.reset_mock()
+
+    def test_check_bad_event_call(self):
+        err = EC2ResponseError(500, 'Unit test', 'This error was intentionally generated for unit test.')
+        self._boto.connect_ec2.return_value.get_all_instance_status.side_effect=err
+
+        self._checker.check()
+
+        debug_calls = [
+            (('Checking region: %s', self.GOOD_REGION),),
+        ]
+        self.assertEqual(debug_calls, self._logger.debug.call_args_list)
+
+        error_calls = [
+            (('Unable to query region %r due to %r', self.GOOD_REGION, err),),
+        ]
+        self.assertEqual(error_calls, self._logger.error.call_args_list)
 
     def test_check_no_events(self):
         self._boto.connect_ec2.return_value.get_all_instance_status.return_value = [
