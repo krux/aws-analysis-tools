@@ -25,37 +25,17 @@ from aws_analysis_tools.ec2_events.ec2_event_checker import EC2EventChecker
 
 
 class EC2EventCheckerTest(unittest.TestCase):
-    REGIONS = ['test-region-1', 'cn-test-region-2', 'test-gov-region-3']
-    DESCRIPTIONS = ['scheduled reboot', '[Completed]', '[Canceled]']
+    GOOD_REGION = 'test-region-1'
+    BAD_REGIONS = ['cn-test-region-2', 'test-gov-region-3']
+    GOOD_DESCRIPTION = 'scheduled reboot'
+    BAD_DESCRIPTIONS = ['[Completed]', '[Canceled]']
     INSTANCE_NAME = 'unit-test.krxd.net'
 
     def setUp(self):
-        regions = []
-        for region in self.REGIONS:
-            mock = MagicMock()
-            mock.name = region
-            regions.append(mock)
-
-        ec2 = MagicMock(
-            regions=MagicMock(
-                return_value=regions,
-            ),
-        )
-
-        connection = MagicMock(
-            get_all_instance_status=MagicMock(
-                return_value=[MagicMock(events=[
-                    MagicMock(description=d) for d in self.DESCRIPTIONS
-                ])]
-            ),
-            get_only_instances=MagicMock(
-                return_value=[MagicMock(tags={'Name': self.INSTANCE_NAME})]
-            )
-        )
         self._boto = MagicMock(
-            ec2=ec2,
+            ec2=EC2EventCheckerTest._get_ec2(),
             connect_ec2=MagicMock(
-                return_value=connection
+                return_value=EC2EventCheckerTest._get_connection()
             ),
         )
 
@@ -69,6 +49,28 @@ class EC2EventCheckerTest(unittest.TestCase):
             logger=self._logger,
         )
 
+    @staticmethod
+    def _get_ec2(region=GOOD_REGION):
+        mock_region = MagicMock()
+        mock_region.name = region
+
+        return MagicMock(
+            regions=MagicMock(
+                return_value=[mock_region],
+            ),
+        )
+
+    @staticmethod
+    def _get_connection(event_desc=GOOD_DESCRIPTION, instance_name=INSTANCE_NAME):
+        return MagicMock(
+            get_all_instance_status=MagicMock(
+                return_value=[MagicMock(events=[MagicMock(description=event_desc)])]
+            ),
+            get_only_instances=MagicMock(
+                return_value=[MagicMock(tags={'Name': instance_name})]
+            )
+        )
+
     def test_add_listener(self):
         pass
 
@@ -78,11 +80,11 @@ class EC2EventCheckerTest(unittest.TestCase):
     def test_notify_complete(self):
         pass
 
-    def test_check(self):
+    def test_check_pass(self):
         self._checker.check()
 
         debug_calls = [
-            (('Checking region: %s', self.REGIONS[0]),),
-            (('Found following event: %s => %s', self.INSTANCE_NAME, self.DESCRIPTIONS[0]),),
+            (('Checking region: %s', self.GOOD_REGION),),
+            (('Found following event: %s => %s', self.INSTANCE_NAME, self.GOOD_DESCRIPTION),),
         ]
         self.assertEqual(debug_calls, self._logger.debug.call_args_list)
