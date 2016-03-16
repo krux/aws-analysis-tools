@@ -80,6 +80,41 @@ class EC2EventCheckerTest(unittest.TestCase):
     def test_notify_complete(self):
         pass
 
+    def test_check_bad_regions(self):
+        for region in self.BAD_REGIONS:
+            self._boto.ec2=EC2EventCheckerTest._get_ec2(region=region)
+
+            self._checker.check()
+
+            self.assertEqual([], self._logger.debug.call_args_list)
+
+            self._logger.reset_mock()
+
+    def test_check_no_events(self):
+        self._boto.connect_ec2.return_value.get_all_instance_status.return_value = [
+            MagicMock(events=[])
+        ]
+
+        self._checker.check()
+
+        debug_calls = [
+            (('Checking region: %s', self.GOOD_REGION),),
+        ]
+        self.assertEqual(debug_calls, self._logger.debug.call_args_list)
+
+    def test_check_bad_events(self):
+        for desc in self.BAD_DESCRIPTIONS:
+            self._boto.connect_ec2.return_value=EC2EventCheckerTest._get_connection(event_desc=desc)
+
+            self._checker.check()
+
+            debug_calls = [
+                (('Checking region: %s', self.GOOD_REGION),),
+            ]
+            self.assertEqual(debug_calls, self._logger.debug.call_args_list)
+
+            self._logger.reset_mock()
+
     def test_check_pass(self):
         self._checker.check()
 
