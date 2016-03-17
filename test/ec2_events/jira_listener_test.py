@@ -89,25 +89,82 @@ class JiraListenerTest(unittest.TestCase):
             **kwargs
         )
 
+    def _get_jql_search(self):
+        yesterday_str = (DateTime() - 1).Date()
+        jql_search = self.JQL_TEMPLATE.format(instance_id=self.INSTANCE_ID, yesterday=yesterday_str)
+        return (
+            call(
+                'Found %s issues that matches the JQL search: %s',
+                len(self._issues),
+                jql_search,
+            ),
+            self._generate_request_call(
+                method='POST',
+                url=self.APP_SEARCH_URL,
+                json={
+                    'jql': jql_search,
+                    'fields': [],
+                },
+            )
+        )
+
+    def _get_retrieve_comment_request_call(self):
+        return self._generate_request_call(
+            method='GET',
+            url=self.APP_COMMENT_URL.format(issue=self.ISSUE_KEY),
+        )
+
+    def _get_comment_body(self, end_time):
+        start_time = DateTime(self._event.not_before)
+        return self.COMMENT_TEMPLATE.format(
+            instance_name=self.INSTANCE_NAME,
+            # GOTCHA: Change the time to Pacific time for easier calculation
+            # This should handle Daylight Savings Time graciously on its own
+            start_time=str(start_time.toZone('US/Pacific')),
+            end_time=str(end_time.toZone('US/Pacific')),
+        )
+
+    def _verify_full_execution(self, end_time):
+        with patch('aws_analysis_tools.ec2_events.jira_listener.request', self._request):
+            self._listener.handle_event(self._instance, self._event)
+
+        jql_search_log_call, jql_search_requst_call = self._get_jql_search()
+
+        debug_calls = [
+            jql_search_log_call,
+            call('Determined issue %s needs a comment', self.ISSUE_KEY),
+        ]
+        self.assertEqual(debug_calls, self._logger.debug.call_args_list)
+
+        comment = self._get_comment_body(end_time)
+
+        self._logger.info.assert_called_once_with('Added comment to issue %s: %s', self.ISSUE_KEY, comment)
+
+        request_calls = [
+            jql_search_requst_call,
+            self._get_retrieve_comment_request_call(),
+            self._generate_request_call(
+                method='POST',
+                url=self.APP_COMMENT_URL.format(issue=self.ISSUE_KEY),
+                json={
+                    'body': comment
+                },
+            ),
+        ]
+        self.assertEqual(request_calls, self._request.call_args_list)
+
     def test_handle_event_no_issue(self):
         del self._issues[:]
 
         with patch('aws_analysis_tools.ec2_events.jira_listener.request', self._request):
             self._listener.handle_event(self._instance, self._event)
 
-        yesterday_str = (DateTime() - 1).Date()
-        jql_search = self.JQL_TEMPLATE.format(instance_id=self.INSTANCE_ID, yesterday=yesterday_str)
+        jql_search_log_call, jql_search_requst_call = self._get_jql_search()
 
-        self._logger.debug.assert_called_once_with('Found %s issues that matches the JQL search: %s', len(self._issues), jql_search)
+        debug_calls = [jql_search_log_call]
+        self.assertEqual(debug_calls, self._logger.debug.call_args_list)
 
-        request_calls = [self._generate_request_call(
-            method='POST',
-            url=self.APP_SEARCH_URL,
-            json={
-                'jql': jql_search,
-                'fields': [],
-            },
-        )]
+        request_calls = [jql_search_requst_call]
         self.assertEqual(request_calls, self._request.call_args_list)
 
     def test_handle_event_issue_with_comments(self):
@@ -116,174 +173,29 @@ class JiraListenerTest(unittest.TestCase):
         with patch('aws_analysis_tools.ec2_events.jira_listener.request', self._request):
             self._listener.handle_event(self._instance, self._event)
 
-        yesterday_str = (DateTime() - 1).Date()
-        jql_search = self.JQL_TEMPLATE.format(instance_id=self.INSTANCE_ID, yesterday=yesterday_str)
+        jql_search_log_call, jql_search_requst_call = self._get_jql_search()
 
-        self._logger.debug.assert_called_once_with('Found %s issues that matches the JQL search: %s', len(self._issues), jql_search)
+        debug_calls = [jql_search_log_call]
+        self.assertEqual(debug_calls, self._logger.debug.call_args_list)
 
         request_calls = [
-            self._generate_request_call(
-                method='POST',
-                url=self.APP_SEARCH_URL,
-                json={
-                    'jql': jql_search,
-                    'fields': [],
-                },
-            ),
-            self._generate_request_call(
-                method='GET',
-                url=self.APP_COMMENT_URL.format(issue=self.ISSUE_KEY),
-            )
+            jql_search_requst_call,
+            self._get_retrieve_comment_request_call(),
         ]
         self.assertEqual(request_calls, self._request.call_args_list)
 
     def test_handle_event_issue_with_other_comments(self):
         self._comments.append({'body': 'Some random comment'})
 
-        with patch('aws_analysis_tools.ec2_events.jira_listener.request', self._request):
-            self._listener.handle_event(self._instance, self._event)
-
-        yesterday_str = (DateTime() - 1).Date()
-        jql_search = self.JQL_TEMPLATE.format(instance_id=self.INSTANCE_ID, yesterday=yesterday_str)
-
-        debug_calls = [
-            call('Found %s issues that matches the JQL search: %s', len(self._issues), jql_search),
-            call('Determined issue %s needs a comment', self.ISSUE_KEY),
-        ]
-        self.assertEqual(debug_calls, self._logger.debug.call_args_list)
-
-        start_time = DateTime(self._event.not_before)
-        end_time = DateTime(self._event.not_after)
-        body = self.COMMENT_TEMPLATE.format(
-            instance_name=self.INSTANCE_NAME,
-            # GOTCHA: Change the time to Pacific time for easier calculation
-            # This should handle Daylight Savings Time graciously on its own
-            start_time=str(start_time.toZone('US/Pacific')),
-            end_time=str(end_time.toZone('US/Pacific')),
-        )
-
-        self._logger.info.assert_called_once_with('Added comment to issue %s: %s', self.ISSUE_KEY, body)
-
-        request_calls = [
-            self._generate_request_call(
-                method='POST',
-                url=self.APP_SEARCH_URL,
-                json={
-                    'jql': jql_search,
-                    'fields': [],
-                },
-            ),
-            self._generate_request_call(
-                method='GET',
-                url=self.APP_COMMENT_URL.format(issue=self.ISSUE_KEY),
-            ),
-            self._generate_request_call(
-                method='POST',
-                url=self.APP_COMMENT_URL.format(issue=self.ISSUE_KEY),
-                json={
-                    'body': body
-                },
-            )
-        ]
-        self.assertEqual(request_calls, self._request.call_args_list)
+        self._verify_full_execution(end_time=DateTime(self._event.not_after))
 
     def test_handle_event_no_end_time(self):
         self._event.not_after = None
 
-        with patch('aws_analysis_tools.ec2_events.jira_listener.request', self._request):
-            self._listener.handle_event(self._instance, self._event)
-
-        yesterday_str = (DateTime() - 1).Date()
-        jql_search = self.JQL_TEMPLATE.format(instance_id=self.INSTANCE_ID, yesterday=yesterday_str)
-
-        debug_calls = [
-            call('Found %s issues that matches the JQL search: %s', len(self._issues), jql_search),
-            call('Determined issue %s needs a comment', self.ISSUE_KEY),
-        ]
-        self.assertEqual(debug_calls, self._logger.debug.call_args_list)
-
-        start_time = DateTime(self._event.not_before)
-        end_time = DateTime(9999, 12, 31)
-        body = self.COMMENT_TEMPLATE.format(
-            instance_name=self.INSTANCE_NAME,
-            # GOTCHA: Change the time to Pacific time for easier calculation
-            # This should handle Daylight Savings Time graciously on its own
-            start_time=str(start_time.toZone('US/Pacific')),
-            end_time=str(end_time.toZone('US/Pacific')),
-        )
-
-        self._logger.info.assert_called_once_with('Added comment to issue %s: %s', self.ISSUE_KEY, body)
-
-        request_calls = [
-            self._generate_request_call(
-                method='POST',
-                url=self.APP_SEARCH_URL,
-                json={
-                    'jql': jql_search,
-                    'fields': [],
-                },
-            ),
-            self._generate_request_call(
-                method='GET',
-                url=self.APP_COMMENT_URL.format(issue=self.ISSUE_KEY),
-            ),
-            self._generate_request_call(
-                method='POST',
-                url=self.APP_COMMENT_URL.format(issue=self.ISSUE_KEY),
-                json={
-                    'body': body
-                },
-            )
-        ]
-        self.assertEqual(request_calls, self._request.call_args_list)
+        self._verify_full_execution(end_time=DateTime(9999, 12, 31))
 
     def test_handle_event_pass(self):
-        with patch('aws_analysis_tools.ec2_events.jira_listener.request', self._request):
-            self._listener.handle_event(self._instance, self._event)
-
-        yesterday_str = (DateTime() - 1).Date()
-        jql_search = self.JQL_TEMPLATE.format(instance_id=self.INSTANCE_ID, yesterday=yesterday_str)
-
-        debug_calls = [
-            call('Found %s issues that matches the JQL search: %s', len(self._issues), jql_search),
-            call('Determined issue %s needs a comment', self.ISSUE_KEY),
-        ]
-        self.assertEqual(debug_calls, self._logger.debug.call_args_list)
-
-        start_time = DateTime(self._event.not_before)
-        end_time = DateTime(self._event.not_after)
-        body = self.COMMENT_TEMPLATE.format(
-            instance_name=self.INSTANCE_NAME,
-            # GOTCHA: Change the time to Pacific time for easier calculation
-            # This should handle Daylight Savings Time graciously on its own
-            start_time=str(start_time.toZone('US/Pacific')),
-            end_time=str(end_time.toZone('US/Pacific')),
-        )
-
-        self._logger.info.assert_called_once_with('Added comment to issue %s: %s', self.ISSUE_KEY, body)
-
-        request_calls = [
-            self._generate_request_call(
-                method='POST',
-                url=self.APP_SEARCH_URL,
-                json={
-                    'jql': jql_search,
-                    'fields': [],
-                },
-            ),
-            self._generate_request_call(
-                method='GET',
-                url=self.APP_COMMENT_URL.format(issue=self.ISSUE_KEY),
-            ),
-            self._generate_request_call(
-                method='POST',
-                url=self.APP_COMMENT_URL.format(issue=self.ISSUE_KEY),
-                json={
-                    'body': body
-                },
-            )
-        ]
-        self.assertEqual(request_calls, self._request.call_args_list)
+        self._verify_full_execution(end_time=DateTime(self._event.not_after))
 
     def test_request_fail(self):
         self._res.status_code = self.EXCEPTION_STATUS
