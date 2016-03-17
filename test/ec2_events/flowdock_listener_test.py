@@ -41,8 +41,10 @@ class FlowdockListenerTest(unittest.TestCase):
     MESSAGE_FORMAT = '{az}: {name} ({id}) - {description} between {start_time} and {end_time}'
 
     def setUp(self):
+        # Set up a mock stats. This is used to verify code execution
         self._stats = MagicMock()
 
+        # Set up a mock flowdock object
         self._flowdock = MagicMock()
         self._flowdock_lib = MagicMock(
             Chat=MagicMock(
@@ -50,6 +52,7 @@ class FlowdockListenerTest(unittest.TestCase):
             )
         )
 
+        # Set up the listener to be tested with the mock flowdock object
         with patch('aws_analysis_tools.ec2_events.flowdock_listener.flowdock', self._flowdock_lib):
             self._listener = FlowdockListener(
                 flow_token = self.FLOW_TOKEN,
