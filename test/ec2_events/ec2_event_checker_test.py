@@ -14,7 +14,7 @@ import unittest
 # Third party libraries
 #
 
-from mock import MagicMock, patch
+from mock import MagicMock, call
 from boto.exception import EC2ResponseError
 
 #
@@ -132,11 +132,11 @@ class EC2EventCheckerTest(unittest.TestCase):
         self._checker.check()
 
         # The region check log would be present
-        debug_calls = [(('Checking region: %s', region),) for region in self.GOOD_REGIONS]
+        debug_calls = [call('Checking region: %s', region) for region in self.GOOD_REGIONS]
         self.assertEqual(debug_calls, self._logger.debug.call_args_list)
 
         # The error should be logged
-        error_calls = [(('Unable to query region %r due to %r', region, err),) for region in self.GOOD_REGIONS]
+        error_calls = [call('Unable to query region %r due to %r', region, err) for region in self.GOOD_REGIONS]
         self.assertEqual(error_calls, self._logger.error.call_args_list)
 
         # Complete handler should be called for all listeners
@@ -153,7 +153,7 @@ class EC2EventCheckerTest(unittest.TestCase):
         self._checker.check()
 
         # The region check log would be present
-        debug_calls = [(('Checking region: %s', region),) for region in self.GOOD_REGIONS]
+        debug_calls = [call('Checking region: %s', region) for region in self.GOOD_REGIONS]
         self.assertEqual(debug_calls, self._logger.debug.call_args_list)
 
         # Complete handler should be called for all listeners
@@ -170,7 +170,7 @@ class EC2EventCheckerTest(unittest.TestCase):
         self._checker.check()
 
         # The region check log would be present
-        debug_calls = [(('Checking region: %s', region),) for region in self.GOOD_REGIONS]
+        debug_calls = [call('Checking region: %s', region) for region in self.GOOD_REGIONS]
         self.assertEqual(debug_calls, self._logger.debug.call_args_list)
 
         # Complete handler should be called for all listeners
@@ -187,15 +187,15 @@ class EC2EventCheckerTest(unittest.TestCase):
         event_calls = []
         for region in self.GOOD_REGIONS:
             # The region check log should be present for all regions
-            debug_calls.append((('Checking region: %s', region),))
+            debug_calls.append(call('Checking region: %s', region))
 
             for desc in self.GOOD_DESCRIPTIONS:
                 # The event log should be present for all events
-                debug_calls.append((('Found following event: %s => %s', self.INSTANCE_NAME, desc),))
+                debug_calls.append(call('Found following event: %s => %s', self.INSTANCE_NAME, desc))
 
             for event in self._events:
                 # Event handler should be called for all events
-                event_calls.append(((self._instance, event),))
+                event_calls.append(call(self._instance, event))
 
         self.assertEqual(debug_calls, self._logger.debug.call_args_list)
 
