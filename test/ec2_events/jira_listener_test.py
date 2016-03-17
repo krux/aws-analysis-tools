@@ -33,9 +33,13 @@ class JiraListenerTest(unittest.TestCase):
     INSTANCE_NAME = 'unit-test.krxd.net'
     INSTANCE_ID = 'i-a1b2c3d4'
     ISSUE_KEY = 'FAKE-1234'
+    EXCEPTION_STATUS = 400
+    EXCEPTION_REASON = 'Bad Request'
+    EXCEPTION_CONTENT = 'Unit test failure'
 
     JQL_TEMPLATE = 'description ~ "{instance_id}" AND type = "Maintenance Task" AND createdDate >= "{yesterday}"'
     COMMENT_TEMPLATE = '{instance_name}\r\n\r\nPlease schedule Icinga downtime from {start_time} to {end_time}.'
+    EXCEPTION_TEMPLATE = 'Something went wrong. {status_code} {reason} was returned. Body: {body}'
 
     def setUp(self):
         self._issues = [{'key': self.ISSUE_KEY}]
@@ -280,6 +284,17 @@ class JiraListenerTest(unittest.TestCase):
             )
         ]
         self.assertEqual(request_calls, self._request.call_args_list)
+
+    def test_request_fail(self):
+        self._res.status_code = self.EXCEPTION_STATUS
+        self._res.reason = self.EXCEPTION_REASON
+        self._res.content = self.EXCEPTION_CONTENT
+
+        with patch('aws_analysis_tools.ec2_events.jira_listener.request', self._request):
+            with self.assertRaises(ValueError) as e:
+                self._listener.handle_event(self._instance, self._event)
+
+        self.assertEqual(self.EXCEPTION_TEMPLATE.format(status_code=self.EXCEPTION_STATUS, reason=self.EXCEPTION_REASON, body=self.EXCEPTION_CONTENT), e.exception.message)
 
     def test_handle_complete(self):
         """
