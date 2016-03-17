@@ -59,6 +59,9 @@ class FlowdockListenerTest(unittest.TestCase):
 
     @classmethod
     def _get_event_params(cls):
+        """
+        Returns a mock instance and status event
+        """
         region = MagicMock()
         region.name = cls.INSTANCE_REGION
         instance = MagicMock(
@@ -86,16 +89,26 @@ class FlowdockListenerTest(unittest.TestCase):
         self._flowdock_lib.Chat.assert_called_once_with(self.FLOW_TOKEN)
 
     def test_handle_event(self):
+        """
+        handle_event() correctly increment the stats for the given event type and region
+        """
         self._listener.handle_event(**FlowdockListenerTest._get_event_params())
 
         self._stats.incr.assert_called_once_with(self.STAT_FORMAT.format(region=self.INSTANCE_REGION, event_code=self.EVENT_CODE))
 
     def test_handle_complete_no_events(self):
+        """
+        handle_complete() correctly exits without any action when no event was added
+        """
         self._listener.handle_complete()
 
         self.assertFalse(self._flowdock.post.called)
 
     def test_handle_complete(self):
+        """
+        handle_complete() correctly post a message with all events
+        """
+        # Generate 10 fake events
         events = []
         for i in xrange(self.EVENT_COUNT):
             params = FlowdockListenerTest._get_event_params()
@@ -111,6 +124,7 @@ class FlowdockListenerTest(unittest.TestCase):
 
         self._listener.handle_complete()
 
+        # Check the events are posted to Flowdock
         self._flowdock.post.assert_called_once_with(
             self.EVENT_SEPARATOR.join(events),
             self.APP_NAME,
