@@ -187,6 +187,50 @@ class JiraListenerTest(unittest.TestCase):
         with patch('aws_analysis_tools.ec2_events.jira_listener.request', self._request):
             self._listener.handle_event(self._instance, self._event)
 
+        yesterday_str = (DateTime() - 1).Date()
+        jql_search = self.JQL_TEMPLATE.format(instance_id=self.INSTANCE_ID, yesterday=yesterday_str)
+
+        debug_calls = [
+            call('Found %s issues that matches the JQL search: %s', len(self._issues), jql_search),
+            call('Determined issue %s needs a comment', self.ISSUE_KEY),
+        ]
+        self.assertEqual(debug_calls, self._logger.debug.call_args_list)
+
+        start_time = DateTime(self._event.not_before)
+        end_time = DateTime(self._event.not_after)
+        body = self.COMMENT_TEMPLATE.format(
+            instance_name=self.INSTANCE_NAME,
+            # GOTCHA: Change the time to Pacific time for easier calculation
+            # This should handle Daylight Savings Time graciously on its own
+            start_time=str(start_time.toZone('US/Pacific')),
+            end_time=str(end_time.toZone('US/Pacific')),
+        )
+
+        self._logger.info.assert_called_once_with('Added comment to issue %s: %s', self.ISSUE_KEY, body)
+
+        request_calls = [
+            self._generate_request_call(
+                method='POST',
+                url=self.APP_SEARCH_URL,
+                json={
+                    'jql': jql_search,
+                    'fields': [],
+                },
+            ),
+            self._generate_request_call(
+                method='GET',
+                url=self.APP_COMMENT_URL.format(issue=self.ISSUE_KEY),
+            ),
+            self._generate_request_call(
+                method='POST',
+                url=self.APP_COMMENT_URL.format(issue=self.ISSUE_KEY),
+                json={
+                    'body': body
+                },
+            )
+        ]
+        self.assertEqual(request_calls, self._request.call_args_list)
+
     def test_handle_complete(self):
         """
         handle_complete() method can be called
