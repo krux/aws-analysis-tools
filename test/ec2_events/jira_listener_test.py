@@ -38,16 +38,17 @@ class JiraListenerTest(unittest.TestCase):
     COMMENT_TEMPLATE = '{instance_name}\r\n\r\nPlease schedule Icinga downtime from {start_time} to {end_time}.'
 
     def setUp(self):
-        self._json = MagicMock(
-            side_effect=[
-                {'issues': [{'key': self.ISSUE_KEY}]},
-                {'comments': [{'body': ''}]},
-                {},
-            ]
-        )
+        self._issues = [{'key': self.ISSUE_KEY}]
+        self._comments = [{'body': ''}]
         self._res = MagicMock(
             status_code=200,
-            json=self._json,
+            json=MagicMock(
+                side_effect=[
+                    {'issues': self._issues},
+                    {'comments': self._comments},
+                    {},
+                ]
+            ),
         )
         self._request = MagicMock(
             return_value=self._res,
@@ -85,11 +86,7 @@ class JiraListenerTest(unittest.TestCase):
         )
 
     def test_handle_event_no_issue(self):
-        self._json.side_effect=[
-            {'issues': []},
-            {'comments': [{'body': ''}]},
-            {},
-        ]
+        del self._issues[:]
 
         with patch('aws_analysis_tools.ec2_events.jira_listener.request', self._request):
             self._listener.handle_event(self._instance, self._event)
@@ -97,7 +94,7 @@ class JiraListenerTest(unittest.TestCase):
         yesterday_str = (DateTime() - 1).Date()
         jql_search = self.JQL_TEMPLATE.format(instance_id=self.INSTANCE_ID, yesterday=yesterday_str)
 
-        self._logger.debug.assert_called_once_with('Found %s issues that matches the JQL search: %s', 0, jql_search)
+        self._logger.debug.assert_called_once_with('Found %s issues that matches the JQL search: %s', len(self._issues), jql_search)
 
         request_calls = [self._generate_request_call(
             method='POST',
@@ -107,6 +104,33 @@ class JiraListenerTest(unittest.TestCase):
                 'fields': [],
             },
         )]
+        self.assertEqual(request_calls, self._request.call_args_list)
+
+    def test_handle_event_issue_with_comments(self):
+        self._comments[0] = {'body': self.INSTANCE_NAME}
+
+        with patch('aws_analysis_tools.ec2_events.jira_listener.request', self._request):
+            self._listener.handle_event(self._instance, self._event)
+
+        yesterday_str = (DateTime() - 1).Date()
+        jql_search = self.JQL_TEMPLATE.format(instance_id=self.INSTANCE_ID, yesterday=yesterday_str)
+
+        self._logger.debug.assert_called_once_with('Found %s issues that matches the JQL search: %s', len(self._issues), jql_search)
+
+        request_calls = [
+            self._generate_request_call(
+                method='POST',
+                url=self.APP_SEARCH_URL,
+                json={
+                    'jql': jql_search,
+                    'fields': [],
+                },
+            ),
+            self._generate_request_call(
+                method='GET',
+                url=self.APP_COMMENT_URL.format(issue=self.ISSUE_KEY)
+            )
+        ]
         self.assertEqual(request_calls, self._request.call_args_list)
 
     def test_handle_event_pass(self):
