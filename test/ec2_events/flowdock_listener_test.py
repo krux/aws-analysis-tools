@@ -91,7 +91,9 @@ class FlowdockListenerTest(unittest.TestCase):
         self._stats.incr.assert_called_once_with(self.STAT_FORMAT.format(region=self.INSTANCE_REGION, event_code=self.EVENT_CODE))
 
     def test_handle_complete_no_events(self):
-        pass
+        self._listener.handle_complete()
+
+        self.assertFalse(self._flowdock.post.called)
 
     def test_handle_complete(self):
         events = []
