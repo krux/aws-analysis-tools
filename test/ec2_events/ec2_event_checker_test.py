@@ -115,7 +115,7 @@ class EC2EventCheckerTest(unittest.TestCase):
         self._checker.check()
 
         # There can't be any log because the first for loop will filter everything out
-        self.assertEqual([], self._logger.debug.call_args_list)
+        self.assertFalse(self._logger.debug.called)
 
         # Complete handler should be called for all listeners
         for listener in self._listeners:
