@@ -47,4 +47,7 @@ class JiraListenerTest(unittest.TestCase):
         pass
 
     def test_handle_complete(self):
-        pass
+        """
+        handle_complete() method can be called
+        """
+        self._listener.handle_complete()
