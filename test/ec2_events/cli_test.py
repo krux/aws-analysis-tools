@@ -80,6 +80,9 @@ class CLItest(unittest.TestCase):
         )
 
     def test_add_cli_arguments(self):
+        """
+        All arguments from the checkers and listeners are present in the args
+        """
         app = Application()
 
         self.assertIn('flowdock_token', app.args)
@@ -88,6 +91,9 @@ class CLItest(unittest.TestCase):
         self.assertIn('jira_base_url', app.args)
 
     def test_run(self):
+        """
+        Checker's check() method is correctly called in app.run()
+        """
         checker = MagicMock()
 
         with patch('aws_analysis_tools.ec2_events.cli.EC2EventChecker', return_value=checker):
@@ -97,6 +103,9 @@ class CLItest(unittest.TestCase):
         checker.check.assert_called_once_with()
 
     def test_main(self):
+        """
+        Application is instantiated and run() is called in main()
+        """
         app = MagicMock()
         app_class = MagicMock(return_value=app)
 
