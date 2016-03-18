@@ -21,7 +21,7 @@ from mock import MagicMock, patch
 # Internal libraries
 #
 
-from aws_analysis_tools.ec2_events.cli import Application, NAME
+from aws_analysis_tools.ec2_events.cli import Application, NAME, main
 
 
 class CLItest(unittest.TestCase):
@@ -88,7 +88,20 @@ class CLItest(unittest.TestCase):
         self.assertIn('jira_base_url', app.args)
 
     def test_run(self):
-        pass
+        checker = MagicMock()
+
+        with patch('aws_analysis_tools.ec2_events.cli.EC2EventChecker', return_value=checker):
+            app = Application()
+            app.run()
+
+        checker.check.assert_called_once_with()
 
     def test_main(self):
-        pass
+        app = MagicMock()
+        app_class = MagicMock(return_value=app)
+
+        with patch('aws_analysis_tools.ec2_events.cli.Application', app_class):
+            main()
+
+        app_class.assert_called_once_with()
+        app.run.assert_called_once_with()
