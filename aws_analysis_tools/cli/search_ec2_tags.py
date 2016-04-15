@@ -147,7 +147,7 @@ def search_tags(query_terms, passed_regions=None, log=None):
             continue
 
 
-    return inst_names
+    return sorted(inst_names)
 
 
 class Application(krux.cli.Application):
