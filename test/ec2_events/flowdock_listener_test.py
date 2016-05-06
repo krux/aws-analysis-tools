@@ -15,7 +15,7 @@ from datetime import datetime
 # Third party libraries
 #
 
-from mock import MagicMock, patch
+from mock import MagicMock, patch, call
 
 #
 # Internal libraries
@@ -33,8 +33,10 @@ class FlowdockListenerTest(unittest.TestCase):
     INSTANCE_ID = 'i-a1b2c3d4'
     EVENT_CODE = 'system-maintenance'
     EVENT_DESCRIPTION = 'Your instance will experience a loss of network connectivity.'
-    EVENT_COUNT = 1
+    REGULAR_EVENT_COUNT = 5
+    URGENT_EVENT_COUT = 5
     EVENT_SEPARATOR = '\n'
+    URGENT_EVENTS_MESSAGE_FORMAT = '@team, following events will happen within next {hours} hours:\n{events}'
     FLOW_TAG = ['#ec2_events']
 
     STAT_FORMAT = 'event.{region}.{event_code}'
@@ -61,7 +63,7 @@ class FlowdockListenerTest(unittest.TestCase):
             )
 
     @classmethod
-    def _get_event_params(cls):
+    def _get_event_params(cls, start_time=datetime.now()):
         """
         Returns a mock instance and status event
         """
@@ -76,7 +78,7 @@ class FlowdockListenerTest(unittest.TestCase):
         event = MagicMock(
             code=cls.EVENT_CODE,
             description=cls.EVENT_DESCRIPTION,
-            not_before=datetime.now(),
+            not_before=start_time,
             not_after=datetime.now()
         )
 
@@ -111,11 +113,25 @@ class FlowdockListenerTest(unittest.TestCase):
         """
         handle_complete() correctly post a message with all events
         """
-        # Generate 10 fake events
-        events = []
-        for i in xrange(self.EVENT_COUNT):
+        # Generate 5 fake events
+        regular_events = []
+        for i in xrange(self.REGULAR_EVENT_COUNT):
+            params = FlowdockListenerTest._get_event_params(start_time=datetime(9999, 12, 31))
+            regular_events.append(self.MESSAGE_FORMAT.format(
+                az=params['instance'].placement,
+                name=params['instance'].tags['Name'],
+                id=params['instance'].id,
+                description=params['event'].description,
+                start_time=params['event'].not_before,
+                end_time=params['event'].not_after,
+            ))
+            self._listener.handle_event(**params)
+
+        # Generate 5 urgent events
+        urgent_events = []
+        for i in xrange(self.URGENT_EVENT_COUT):
             params = FlowdockListenerTest._get_event_params()
-            events.append(self.MESSAGE_FORMAT.format(
+            urgent_events.append(self.MESSAGE_FORMAT.format(
                 az=params['instance'].placement,
                 name=params['instance'].tags['Name'],
                 id=params['instance'].id,
@@ -128,8 +144,19 @@ class FlowdockListenerTest(unittest.TestCase):
         self._listener.handle_complete()
 
         # Check the events are posted to Flowdock
-        self._flowdock.post.assert_called_once_with(
-            self.EVENT_SEPARATOR.join(events),
-            self.APP_NAME,
-            self.FLOW_TAG,
-        )
+        post_calls = [
+            call(
+                self.EVENT_SEPARATOR.join(regular_events),
+                self.APP_NAME,
+                self.FLOW_TAG,
+            ),
+            call(
+                self.URGENT_EVENTS_MESSAGE_FORMAT.format(
+                    hours=self._listener.urgent_threshold,
+                    events=self.EVENT_SEPARATOR.join(urgent_events),
+                ),
+                self.APP_NAME,
+                self.FLOW_TAG,
+            )
+        ]
+        self.assertEquals(post_calls, self._flowdock.post.call_args_list)
