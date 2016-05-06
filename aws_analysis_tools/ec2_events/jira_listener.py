@@ -36,14 +36,14 @@ def add_jira_listener_cli_argumemts(parser):
     group.add_argument(
         '--jira-username',
         type=str,
-        help='Username to login to Jira. If provided, will add a comment to Jira tickets',
+        help="Username to login to Jira. If provided, will add a comment to Jira tickets. (default: %(default)s)",
         default=None,
     )
 
     group.add_argument(
         '--jira-password',
         type=str,
-        help='Password for the Jira user.',
+        help="Password for the Jira user. (default: %(default)s)",
         default=None,
     )
 
