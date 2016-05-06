@@ -15,7 +15,7 @@ from pip.req    import parse_requirements
 import os
 
 # We use the version to construct the DOWNLOAD_URL.
-VERSION      = '0.3.0'
+VERSION      = '0.4.0'
 
 # URL to the repository on Github.
 REPO_URL     = 'https://github.com/krux/aws-analysis-tools'
