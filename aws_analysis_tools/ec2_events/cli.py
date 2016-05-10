@@ -36,12 +36,14 @@ class Application(krux_boto.Application):
         )
 
         if self.args.flowdock_token is not None:
-            self._checker.add_listener(FlowdockListener(
+            flowdock = FlowdockListener(
                 flow_token=self.args.flowdock_token,
                 name=name,
                 logger=self.logger,
                 stats=self.stats,
-            ))
+            )
+            flowdock.urgent_threshold = self.args.urgent
+            self._checker.add_listener(flowdock)
 
         if self.args.jira_username is not None:
             self._checker.add_listener(JiraListener(

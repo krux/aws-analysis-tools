@@ -29,6 +29,7 @@ class CLItest(unittest.TestCase):
     JIRA_PASSWORD = 'password'
     JIRA_BASE_URL = 'https://unit-test.example.com/'
     FLOW_TOKEN = 'fake-flow-token'
+    FLOW_URGENT = '24'
 
     @patch('aws_analysis_tools.ec2_events.cli.EC2EventChecker')
     @patch('aws_analysis_tools.ec2_events.cli.FlowdockListener')
@@ -48,7 +49,7 @@ class CLItest(unittest.TestCase):
         self.assertFalse(mock_flowdock.called)
         self.assertFalse(mock_jira.called)
 
-    @patch.object(sys, 'argv', ['prog', '--jira-username', JIRA_USERNAME, '--jira-password', JIRA_PASSWORD, '--jira-base-url', JIRA_BASE_URL, '--flowdock-token', FLOW_TOKEN])
+    @patch.object(sys, 'argv', ['prog', '--jira-username', JIRA_USERNAME, '--jira-password', JIRA_PASSWORD, '--jira-base-url', JIRA_BASE_URL, '--flowdock-token', FLOW_TOKEN, '--urgent', FLOW_URGENT])
     @patch('aws_analysis_tools.ec2_events.cli.EC2EventChecker')
     @patch('aws_analysis_tools.ec2_events.cli.FlowdockListener')
     @patch('aws_analysis_tools.ec2_events.cli.JiraListener')
@@ -70,6 +71,7 @@ class CLItest(unittest.TestCase):
             logger=app.logger,
             stats=app.stats
         )
+        self.assertEqual(mock_flowdock.return_value.urgent_threshold, int(self.FLOW_URGENT))
         mock_jira.assert_called_once_with(
             username=self.JIRA_USERNAME,
             password=self.JIRA_PASSWORD,
