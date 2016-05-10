@@ -41,7 +41,7 @@ def add_flowdock_listener_cli_arguments(parser):
     group.add_argument(
         '--urgent',
         type=int,
-        help="If the maintenance event is closer than this hours, it is notified to members. (default: %(default)s)",
+        help="If the event is closer than this number of hours, send an @team notification. (default: %(default)s)",
         default=FlowdockListener.DEFAULT_URGENT_THRESHOLD_HOURS
     )
 
@@ -50,7 +50,7 @@ class FlowdockListener(object):
 
     STAT_FORMAT = 'event.{region}.{event_code}'
     MESSAGE_FORMAT = '{az}: {name} ({id}) - {description} between {start_time} and {end_time}'
-    URGENT_EVENTS_MESSAGE_FORMAT = '@team, following events will happen within next {hours} hours:\n{events}'
+    URGENT_EVENTS_MESSAGE_FORMAT = '@team, the following events will happen within the next {hours} hours:\n{events}'
     DEFAULT_URGENT_THRESHOLD_HOURS = 5 * 24  # 5 days
 
     def __init__(

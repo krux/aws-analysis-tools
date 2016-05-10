@@ -36,7 +36,7 @@ class FlowdockListenerTest(unittest.TestCase):
     REGULAR_EVENT_COUNT = 5
     URGENT_EVENT_COUT = 5
     EVENT_SEPARATOR = '\n'
-    URGENT_EVENTS_MESSAGE_FORMAT = '@team, following events will happen within next {hours} hours:\n{events}'
+    URGENT_EVENTS_MESSAGE_FORMAT = '@team, the following events will happen within the next {hours} hours:\n{events}'
     FLOW_TAG = ['#ec2_events']
 
     STAT_FORMAT = 'event.{region}.{event_code}'
