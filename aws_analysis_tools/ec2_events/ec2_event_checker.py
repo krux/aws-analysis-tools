@@ -20,7 +20,6 @@ import boto
 # Internal libraries
 #
 
-import krux_boto
 from krux.logging import get_logger
 from krux.stats import get_stats
 from krux.cli import get_group
