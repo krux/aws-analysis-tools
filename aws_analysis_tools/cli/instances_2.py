@@ -24,21 +24,16 @@ import krux_boto
 import krux_ec2
 import krux.cli
 from krux_ec2.ec2 import add_ec2_cli_arguments, get_ec2, NAME
+from krux_ec2.filter import Filter
 
 NAME = 'instances'
 
 
-class Application(krux.cli.Application):
+class Application(krux_boto.Application):
 
     def __init__(self, name=NAME):
         # Call to the superclass to bootstrap.
         super(Application, self).__init__(name=name)
-
-        ###################
-        ### Connection
-        ###################
-
-        self.conn = self.boto.ec2.connect_to_region( self.args.region )
 
         ###################
         ### Regexes
@@ -57,15 +52,41 @@ class Application(krux.cli.Application):
 
         # print(options)
 
+        # REMOVE LATER!!!
+        self.ec2 = get_ec2(self.args, self.logger, self.stats)
+
         self.options = vars( self.args )
         self.args.boto_region = self.args.region
+        self.filters = None
+
+        self.convert_args()
 
         # if options.verbose: self.args.log_level = logging.DEBUG
         # else:               self.args.log_level = logging.INFO
 
+
     def convert_args(self):
-        
-        
+        cli_to_aws = { 'group' : 'group-name', 
+                        'name' : 'tag:Name', 
+                        'type' : 'instance-type', 
+                        'zone' : 'availability-zone', 
+                        'state' : 'instance-state-name' }
+
+        include = [ 'group', 'name', 'type', 'zone', 'state' ]
+
+
+        self.filters = {}
+
+        for opt in include:
+            if self.options[ opt ]:
+                aws_opt = cli_to_aws[ opt ]
+                self.filters[ aws_opt ] = self.options[ opt ] 
+
+        # for opt in include:
+        #     exclude_str = 'exclude_' + opt
+        #     if self.options[ exclude_str ]:
+        #         aws_opt = cli_to_aws[ opt ]
+        #         filters[ aws_opt ]
 
     def add_cli_arguments(self, parser):
         # Call to the superclass first
@@ -100,7 +121,9 @@ class Application(krux.cli.Application):
 
 
     def run(self):
-        f = Filter()
+        f = Filter(self.filters)
+
+        print self.ec2.find_instances(f)
 
         # instances   = [ i for r in self.conn.get_all_instances()
         #             for i in r.instances ]
@@ -160,45 +183,45 @@ class Application(krux.cli.Application):
         #     if wanted_node:
         #         rv.append( i )
 
-        table       = Texttable( max_width=0 )
+        # table       = Texttable( max_width=0 )
 
-        table.set_deco( Texttable.HEADER )
-        table.set_cols_dtype( [ 't', 't', 't', 't', 't', 't', 't', 't' ] )
-        table.set_cols_align( [ 'l', 'l', 'l', 'l', 'l', 'l', 'l', 't' ] )
+        # table.set_deco( Texttable.HEADER )
+        # table.set_cols_dtype( [ 't', 't', 't', 't', 't', 't', 't', 't' ] )
+        # table.set_cols_align( [ 'l', 'l', 'l', 'l', 'l', 'l', 'l', 't' ] )
 
-        if not self.args.no_header:
-            ### using add_row, so the headers aren't being centered, for easier grepping
-            table.add_row(
-                [ '# id', 'Name', 'Type', 'Zone', 'Group', 'State', 'Root', 'Volumes' ] )
+        # if not self.args.no_header:
+        #     ### using add_row, so the headers aren't being centered, for easier grepping
+        #     table.add_row(
+        #         [ '# id', 'Name', 'Type', 'Zone', 'Group', 'State', 'Root', 'Volumes' ] )
 
-        instances = rv
-        for i in instances:
 
-            ### XXX there's a bug where you can't get the size of the volumes, it's
-            ### always reported as None :(
-            volumes = ", ".join( [ ebs.volume_id for ebs in i.block_device_mapping.values()
-                                    if ebs.delete_on_termination == False ] )
+        # # instances = rv
+        # for i in instances:
 
-            ### you can use i.region instead of i._placement, but it pretty
-            ### prints to RegionInfo:us-east-1. For now, use the private version
-            ### XXX EVERY column in this output had better have a non-zero length
-            ### or texttable blows up with 'width must be greater than 0' error
-            table.add_row( [ i.id, i.tags.get( 'Name', ' ' ), i.instance_type,
-                             i._placement , i.groups[0].name, i.state,
-                             i.root_device_type, volumes or '-' ] )
+        #     ### XXX there's a bug where you can't get the size of the volumes, it's
+        #     ### always reported as None :(
+        #     volumes = ", ".join( [ ebs.volume_id for ebs in i.block_device_mapping.values()
+        #                             if ebs.delete_on_termination == False ] )
 
-            #PP.pprint( i.__dict__ )
+        #     ### you can use i.region instead of i._placement, but it pretty
+        #     ### prints to RegionInfo:us-east-1. For now, use the private version
+        #     ### XXX EVERY column in this output had better have a non-zero length
+        #     ### or texttable blows up with 'width must be greater than 0' error
+        #     table.add_row( [ i.id, i.tags.get( 'Name', ' ' ), i.instance_type,
+        #                      i._placement , i.groups[0].name, i.state,
+        #                      i.root_device_type, volumes or '-' ] )
 
-        ### table.draw() blows up if there is nothing to print
-        if instances or not self.args.no_header:
-            print table.draw()
+        #     #PP.pprint( i.__dict__ )
+
+        # ### table.draw() blows up if there is nothing to print
+        # if instances or not self.args.no_header:
+        #     print table.draw()
 
 
 def main():
-    #app = Application()
+    app = Application()
     # with app.context():
-    #app.run()
-    print dir(krux_ec2)
+    app.run()
 
 
 if __name__ == '__main__':
