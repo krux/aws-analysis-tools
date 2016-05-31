@@ -40,7 +40,6 @@ class FlowdockListenerTest(unittest.TestCase):
     FLOW_TAG = ['#ec2_events']
 
     STAT_FORMAT = 'event.{region}.{event_code}'
-    # MESSAGE_FORMAT = '{az}: {name} ({id}) - {description} between {start_time} and {end_time}'
     MESSAGE_FORMAT = '{az}: {name} ({id}) - {description} ({code}) between {start_time} and {end_time}'
 
     def setUp(self):
