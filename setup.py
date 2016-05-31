@@ -10,12 +10,9 @@ Package setup for aws-analysis-tools
 ######################
 from __future__ import absolute_import
 from setuptools import setup, find_packages
-from pip.req    import parse_requirements
-
-import os
 
 # We use the version to construct the DOWNLOAD_URL.
-VERSION      = '0.4.0'
+VERSION      = '0.4.1'
 
 # URL to the repository on Github.
 REPO_URL     = 'https://github.com/krux/aws-analysis-tools'
@@ -23,18 +20,6 @@ REPO_URL     = 'https://github.com/krux/aws-analysis-tools'
 # forget to tag!
 DOWNLOAD_URL = ''.join((REPO_URL, '/tarball/release/', VERSION))
 
-# We want to install all the dependencies of the library as well, but we
-# don't want to duplicate the dependencies both here and in
-# requirements.pip. Instead we parse requirements.pip to pull in our
-# dependencies.
-BASE_DIR     = os.path.dirname(os.path.abspath(__file__))
-REQUIREMENTS = os.path.join(BASE_DIR, 'requirements.pip')
-
-# A requirement file can contain comments (#) and can include some other
-# files (--requirement or -r), so we need to use pip's parser to get the
-# final list of dependencies.
-ALL_DEPENDENCIES = set([unicode(package.req)
-                        for package in parse_requirements(REQUIREMENTS)])
 
 ### XXX these all need to be in sub dirs, or it won't work :(
 setup(
@@ -47,7 +32,8 @@ setup(
     download_url     = DOWNLOAD_URL,
     license          = 'All Rights Reserved.',
     packages         = find_packages(),
-    install_requires = ALL_DEPENDENCIES,
+    # dependencies are named in requirements.pip
+    install_requires = [],
     entry_points     = {
         'console_scripts': [
             'krux-search-ec2-tags    = aws_analysis_tools.cli.search_ec2_tags:main',
