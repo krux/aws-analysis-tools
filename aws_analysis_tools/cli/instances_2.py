@@ -13,7 +13,6 @@ from __future__ import absolute_import
 # Third party libraries
 #
 
-import re
 from texttable  import Texttable
 
 #
@@ -21,8 +20,7 @@ from texttable  import Texttable
 #
 
 import krux_boto
-import krux_ec2
-import krux.cli
+import krux_ec2.cli
 from krux_ec2.ec2 import add_ec2_cli_arguments, get_ec2, NAME
 from krux_ec2.filter import Filter
 
@@ -35,58 +33,73 @@ class Application(krux_ec2.cli.Application):
         # Call to the superclass to bootstrap.
         super(Application, self).__init__(name=name)
 
-        ###################
-        ### Regexes
-        ###################
-
-        # self.regexes = {}
-        # for opt in [ 'group', 'exclude_group', 'name', 'exclude_name',
-        #      'type',  'exclude_type',  'zone', 'exclude_zone',
-        #      'state', 'exclude_state' ]:
-
-        #     ### we have a regex we should build
-        #     options = vars( self.args )
-        #     if options.get( opt, None ):
-        #         self.regexes[ opt ] = options.get( opt )
-        #         # self.regexes[ opt ] = re.compile( options.get( opt ), re.IGNORECASE )
-
-        # print(options)
-
-        # REMOVE LATER!!!
-        self.ec2 = get_ec2(self.args, self.logger, self.stats)
-
         self.options = vars( self.args )
-        self.args.boto_region = self.args.region
-        self.filters = None
-
-        self.convert_args()
 
         # if options.verbose: self.args.log_level = logging.DEBUG
         # else:               self.args.log_level = logging.INFO
 
 
-    def convert_args(self):
+    def filter_args(self):
+        # A dict with key=CLI options and value=AWS filters
         cli_to_aws = { 'group' : 'group-name', 
                         'name' : 'tag:Name', 
                         'type' : 'instance-type', 
                         'zone' : 'availability-zone', 
                         'state' : 'instance-state-name' }
 
-        include = [ 'group', 'name', 'type', 'zone', 'state' ]
+        # List of all options
+        opts = [ 'group', 'name', 'type', 'zone', 'state' ]
 
+        # Dictionary of options and values to put in the Filter
+        filter_dict = {}
 
-        self.filters = {}
-
-        for opt in include:
+        # Add entries to filter_dict with key=AWS filters and value=option values
+        # for options that filter on inclusion
+        for opt in opts:
             if self.options[ opt ]:
-                aws_opt = cli_to_aws[ opt ]
-                self.filters[ aws_opt ] = self.options[ opt ] 
+                aws_filter = cli_to_aws[ opt ]
+                filter_dict[ aws_filter ] = self.options[ opt ] 
 
-        # for opt in include:
-        #     exclude_str = 'exclude_' + opt
-        #     if self.options[ exclude_str ]:
-        #         aws_opt = cli_to_aws[ opt ]
-        #         filters[ aws_opt ]
+        f = Filter(filter_dict)
+
+        # Filter/find instances based on inclusion filters
+        instances = self.ec2.find_instances(f)
+        instances_copy = list(instances)
+
+        # Iterate through the found instances and filter based on exclude options
+        for opt in opts:
+            exclude_str = 'exclude_' + opt
+
+            if self.options[ exclude_str ]:
+                attribute = self.options[ exclude_str ]
+            else:
+                continue
+
+            for i in instances_copy:
+                # If the instance should be excluded based on an attribute, remove it
+                if self.get_instance_attribute(i, opt) == attribute:
+                    instances.remove(i)
+
+        return instances
+
+    # Given an AWS instance and a CLI opt returns the corresponding instance attribute
+    def get_instance_attribute(self, instance, opt):
+        if opt == 'group':
+            return instance.group_name
+
+        if opt == 'tag:Name':
+            if instance.tags:
+                return instance.tags['Name']
+            return None
+        
+        if opt == 'type':
+            return instance.instance_type
+
+        if opt == 'zone':
+            return instance._placement
+
+        if opt == 'state':
+            return instance.state
 
     def add_cli_arguments(self, parser):
         # Call to the superclass first
@@ -121,101 +134,41 @@ class Application(krux_ec2.cli.Application):
 
 
     def run(self):
-        f = Filter(self.filters)
+        with open('out2', 'w') as f:
 
-        print self.ec2.find_instances(f)
+            table       = Texttable( max_width=0 )
 
-        # instances   = [ i for r in self.conn.get_all_instances()
-        #             for i in r.instances ]
+            table.set_deco( Texttable.HEADER )
+            table.set_cols_dtype( [ 't', 't', 't', 't', 't', 't', 't', 't' ] )
+            table.set_cols_align( [ 'l', 'l', 'l', 'l', 'l', 'l', 'l', 't' ] )
 
-        # rv          = [];
-        # for i in instances:
-
-        #     ### we will assume this node is one of the nodes we want
-        #     ### to operate on, and we will unset this flag if any of
-        #     ### the criteria fail
-        #     wanted_node = True
-
-        #     for re_name, regex in self.regexes.iteritems():
-
-        #         ### What's the value we will be testing against?
-        #         if re.search( 'group', re_name ):
-        #             value = i.groups[0].name
-        #         elif re.search( 'name', re_name ):
-        #             value = i.tags.get( 'Name', '' )
-        #         elif re.search( 'type', re_name ):
-        #             value = i.instance_type
-        #         elif re.search( 'state', re_name ):
-        #             value = i.state
-        #         elif re.search( 'zone', re_name ):
-        #             ### i.region is an object. i._placement is a string.
-        #             value = str(i._placement)
-
-        #         else:
-        #             logging.error( "Don't know what to do with: %s" % re_name )
-        #             continue
-
-        #         #PP.pprint( "name = %s value = %s pattern = %s" % ( re_name, value, regex.pattern ) )
-
-        #         ### Should the regex match or not match?
-        #         if re.search( 'exclude', re_name ):
-        #             rv_value = None
-        #         else:
-        #             rv_value = True
-
-        #         ### if the match is not what we expect, then clearly we
-        #         ### don't care about the node
-        #         result = regex.search( value )
-
-        #         ### we expected to get no results, excellent
-        #         if result == None and rv_value == None:
-        #             pass
-
-        #         ### we expected to get some match, excellent
-        #         elif result is not None and rv_value is not None:
-        #             pass
-
-        #         ### we don't care about this node
-        #         else:
-        #             wanted_node = False
-        #             break
-
-        #     if wanted_node:
-        #         rv.append( i )
-
-        # table       = Texttable( max_width=0 )
-
-        # table.set_deco( Texttable.HEADER )
-        # table.set_cols_dtype( [ 't', 't', 't', 't', 't', 't', 't', 't' ] )
-        # table.set_cols_align( [ 'l', 'l', 'l', 'l', 'l', 'l', 'l', 't' ] )
-
-        # if not self.args.no_header:
-        #     ### using add_row, so the headers aren't being centered, for easier grepping
-        #     table.add_row(
-        #         [ '# id', 'Name', 'Type', 'Zone', 'Group', 'State', 'Root', 'Volumes' ] )
+            if not self.args.no_header:
+                ### using add_row, so the headers aren't being centered, for easier grepping
+                table.add_row(
+                    [ '# id', 'Name', 'Type', 'Zone', 'Group', 'State', 'Root', 'Volumes' ] )
 
 
-        # # instances = rv
-        # for i in instances:
+            instances = self.filter_args()
+            for i in instances:
 
-        #     ### XXX there's a bug where you can't get the size of the volumes, it's
-        #     ### always reported as None :(
-        #     volumes = ", ".join( [ ebs.volume_id for ebs in i.block_device_mapping.values()
-        #                             if ebs.delete_on_termination == False ] )
+                ### XXX there's a bug where you can't get the size of the volumes, it's
+                ### always reported as None :(
+                volumes = ", ".join( [ ebs.volume_id for ebs in i.block_device_mapping.values()
+                                        if ebs.delete_on_termination == False ] )
 
-        #     ### you can use i.region instead of i._placement, but it pretty
-        #     ### prints to RegionInfo:us-east-1. For now, use the private version
-        #     ### XXX EVERY column in this output had better have a non-zero length
-        #     ### or texttable blows up with 'width must be greater than 0' error
-        #     table.add_row( [ i.id, i.tags.get( 'Name', ' ' ), i.instance_type,
-        #                      i._placement , i.groups[0].name, i.state,
-        #                      i.root_device_type, volumes or '-' ] )
+                ### you can use i.region instead of i._placement, but it pretty
+                ### prints to RegionInfo:us-east-1. For now, use the private version
+                ### XXX EVERY column in this output had better have a non-zero length
+                ### or texttable blows up with 'width must be greater than 0' error
+                table.add_row( [ i.id, i.tags.get( 'Name', ' ' ), i.instance_type,
+                                 i._placement , i.groups[0].name, i.state,
+                                 i.root_device_type, volumes or '-' ] )
 
-        #     #PP.pprint( i.__dict__ )
 
-        # ### table.draw() blows up if there is nothing to print
-        # if instances or not self.args.no_header:
-        #     print table.draw()
+            ### table.draw() blows up if there is nothing to print
+            if instances or not self.args.no_header:
+                f.write(table.draw())
+                # print table.draw()
 
 
 def main():

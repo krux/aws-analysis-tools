@@ -141,38 +141,40 @@ def get_instances():
     return rv
 
 def list_instances():
-    table       = Texttable( max_width=0 )
+	with open('out1', 'w') as f:
+	    table       = Texttable( max_width=0 )
 
-    table.set_deco( Texttable.HEADER )
-    table.set_cols_dtype( [ 't', 't', 't', 't', 't', 't', 't', 't' ] )
-    table.set_cols_align( [ 'l', 'l', 'l', 'l', 'l', 'l', 'l', 't' ] )
+	    table.set_deco( Texttable.HEADER )
+	    table.set_cols_dtype( [ 't', 't', 't', 't', 't', 't', 't', 't' ] )
+	    table.set_cols_align( [ 'l', 'l', 'l', 'l', 'l', 'l', 'l', 't' ] )
 
-    if not options.no_header:
-        ### using add_row, so the headers aren't being centered, for easier grepping
-        table.add_row(
-            [ '# id', 'Name', 'Type', 'Zone', 'Group', 'State', 'Root', 'Volumes' ] )
+	    if not options.no_header:
+	        ### using add_row, so the headers aren't being centered, for easier grepping
+	        table.add_row(
+	            [ '# id', 'Name', 'Type', 'Zone', 'Group', 'State', 'Root', 'Volumes' ] )
 
-    instances = get_instances()
-    for i in instances:
+	    instances = get_instances()
+	    for i in instances:
 
-        ### XXX there's a bug where you can't get the size of the volumes, it's
-        ### always reported as None :(
-        volumes = ", ".join( [ ebs.volume_id for ebs in i.block_device_mapping.values()
-                                if ebs.delete_on_termination == False ] )
+	        ### XXX there's a bug where you can't get the size of the volumes, it's
+	        ### always reported as None :(
+	        volumes = ", ".join( [ ebs.volume_id for ebs in i.block_device_mapping.values()
+	                                if ebs.delete_on_termination == False ] )
 
-        ### you can use i.region instead of i._placement, but it pretty
-        ### prints to RegionInfo:us-east-1. For now, use the private version
-        ### XXX EVERY column in this output had better have a non-zero length
-        ### or texttable blows up with 'width must be greater than 0' error
-        table.add_row( [ i.id, i.tags.get( 'Name', ' ' ), i.instance_type,
-                         i._placement , i.groups[0].name, i.state,
-                         i.root_device_type, volumes or '-' ] )
+	        ### you can use i.region instead of i._placement, but it pretty
+	        ### prints to RegionInfo:us-east-1. For now, use the private version
+	        ### XXX EVERY column in this output had better have a non-zero length
+	        ### or texttable blows up with 'width must be greater than 0' error
+	        table.add_row( [ i.id, i.tags.get( 'Name', ' ' ), i.instance_type,
+	                         i._placement , i.groups[0].name, i.state,
+	                         i.root_device_type, volumes or '-' ] )
 
-        #PP.pprint( i.__dict__ )
+	        #PP.pprint( i.__dict__ )
 
-    ### table.draw() blows up if there is nothing to print
-    if instances or not options.no_header:
-        print table.draw()
+	    ### table.draw() blows up if there is nothing to print
+	    if instances or not options.no_header:
+	    	f.write(table.draw())
+	        # print table.draw()
 
 if __name__ == '__main__':
     list_instances()
