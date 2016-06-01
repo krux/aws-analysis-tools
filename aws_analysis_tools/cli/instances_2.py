@@ -29,7 +29,7 @@ from krux_ec2.filter import Filter
 NAME = 'instances'
 
 
-class Application(krux_boto.Application):
+class Application(krux_ec2.cli.Application):
 
     def __init__(self, name=NAME):
         # Call to the superclass to bootstrap.
