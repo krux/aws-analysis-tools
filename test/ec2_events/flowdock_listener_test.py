@@ -40,7 +40,7 @@ class FlowdockListenerTest(unittest.TestCase):
     FLOW_TAG = ['#ec2_events']
 
     STAT_FORMAT = 'event.{region}.{event_code}'
-    MESSAGE_FORMAT = '{az}: {name} ({id}) - {description} between {start_time} and {end_time}'
+    MESSAGE_FORMAT = '{az}: {name} ({id}) - {description} ({code}) between {start_time} and {end_time}'
 
     def setUp(self):
         # Set up a mock stats. This is used to verify code execution
@@ -122,6 +122,7 @@ class FlowdockListenerTest(unittest.TestCase):
                 name=params['instance'].tags['Name'],
                 id=params['instance'].id,
                 description=params['event'].description,
+                code=params['event'].code,
                 start_time=params['event'].not_before,
                 end_time=params['event'].not_after,
             ))
@@ -136,6 +137,7 @@ class FlowdockListenerTest(unittest.TestCase):
                 name=params['instance'].tags['Name'],
                 id=params['instance'].id,
                 description=params['event'].description,
+                code=params['event'].code,
                 start_time=params['event'].not_before,
                 end_time=params['event'].not_after,
             ))

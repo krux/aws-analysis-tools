@@ -32,7 +32,7 @@ DateTime==4.0.1
 ###
 ### Transitive dependencies for krux-boto
 ###
-boto==2.28.0
+boto==2.39.0
 
 ###
 ### Transitive dependencies for krux-stdlib
@@ -47,7 +47,7 @@ Pygments==1.6
 docutils==0.10
 
 # stats
-kruxstatsd==0.2.2
+kruxstatsd==0.2.4
 statsd==2.0.3
 
 # Latest tested versions

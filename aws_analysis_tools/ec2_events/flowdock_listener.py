@@ -49,7 +49,7 @@ def add_flowdock_listener_cli_arguments(parser):
 class FlowdockListener(object):
 
     STAT_FORMAT = 'event.{region}.{event_code}'
-    MESSAGE_FORMAT = '{az}: {name} ({id}) - {description} between {start_time} and {end_time}'
+    MESSAGE_FORMAT = '{az}: {name} ({id}) - {description} ({code}) between {start_time} and {end_time}'
     URGENT_EVENTS_MESSAGE_FORMAT = '@team, the following events will happen within the next {hours} hours:\n{events}'
     DEFAULT_URGENT_THRESHOLD_HOURS = 5 * 24  # 5 days
 
@@ -79,6 +79,7 @@ class FlowdockListener(object):
         msg = self.MESSAGE_FORMAT.format(
             az=instance.placement,
             name=instance.tags['Name'],
+            code=event.code,
             id=instance.id,
             description=event.description,
             start_time=event.not_before,
