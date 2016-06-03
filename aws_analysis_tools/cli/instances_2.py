@@ -42,11 +42,11 @@ class Application(krux_ec2.cli.Application):
 
     # A dict with key=CLI options and value=instance attribute
     _INSTANCE_ATTR = {
-            'group': lambda i: i.groups[0].name,
-            'name': lambda i: i.tags.get('Name'),
-            'type': lambda i: i.instance_type,
-            'zone': lambda i: str(i._placement),
-            'state': lambda i: i.state
+            'group': lambda i, attr: next((g.name for g in i.groups if g.name == attr), None),
+            'name': lambda i, attr: i.tags.get('Name'),
+            'type': lambda i, attr: i.instance_type,
+            'zone': lambda i, attr: str(i._placement),
+            'state': lambda i, attr: i.state
         }
 
     def __init__(self, name=NAME):
@@ -168,7 +168,7 @@ class Application(krux_ec2.cli.Application):
             # Exclude instances if they have an attribute that is excluded
             instances = [
                             i for i in instances if
-                            Application._INSTANCE_ATTR[opt](i) != attribute
+                            Application._INSTANCE_ATTR[opt](i, attribute) != attribute
                         ]
 
         return instances
@@ -211,7 +211,7 @@ class Application(krux_ec2.cli.Application):
     def run(self):
         filter_dict = self.convert_args()
         instances = self.filter_args(filter_dict)
-        self.output_table(instances)
+        self.output_table_to_file(instances)
 
 
 def main():
