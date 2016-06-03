@@ -53,80 +53,9 @@ class Application(krux_ec2.cli.Application):
         # Call to the superclass to bootstrap.
         super(Application, self).__init__(name=name)
 
+        # Change self.args into a dict so you can fetch values using
+        # keys instead of attributes
         self.options = vars(self.args)
-
-    # Convert options dictionary to use AWS filters as keys instead of
-    # CLI options
-    def convert_args(self):
-        # Dictionary of options and values to put in the Filter
-        filter_dict = {}
-
-        # Add entries to filter_dict with key=AWS filters and value=option
-        # values for options that filter on inclusion
-        for opt in Application._OPTS:
-            if self.options[opt]:
-                aws_filter = Application._CLI_TO_AWS[opt]
-                filter_dict[aws_filter] = self.options[opt]
-
-        return filter_dict
-
-    # Use filter_dict to filter instances based on inclusion/exclusion options
-    def filter_args(self, filter_dict):
-
-        f = Filter(filter_dict)
-
-        # Filter/find instances based on inclusion filters
-        instances = self.ec2.find_instances(f)
-
-        # Iterate through found instances and filter based on exclude options
-        for opt in Application._OPTS:
-            exclude_str = 'exclude_' + opt
-
-            if self.options[exclude_str]:
-                attribute = self.options[exclude_str]
-            else:
-                continue
-
-            # Exclude instances if they have an attribute that is excluded
-            instances = [
-                            i for i in instances if
-                            Application._INSTANCE_ATTR[opt](i) != attribute
-                        ]
-
-        return instances
-
-    # Outputs filtered instances as a table
-    def output_table(self, instances):
-        table       = Texttable( max_width=0 )
-
-        table.set_deco( Texttable.HEADER )
-        table.set_cols_dtype( [ 't', 't', 't', 't', 't', 't', 't', 't' ] )
-        table.set_cols_align( [ 'l', 'l', 'l', 'l', 'l', 'l', 'l', 't' ] )
-
-        if not self.args.no_header:
-            ### using add_row, so the headers aren't being centered, for easier grepping
-            table.add_row(
-                [ '# id', 'Name', 'Type', 'Zone', 'Group', 'State', 'Root', 'Volumes' ] )
-
-        for i in instances:
-
-            ### XXX there's a bug where you can't get the size of the volumes, it's
-            ### always reported as None :(
-            volumes = ", ".join( [ ebs.volume_id for ebs in i.block_device_mapping.values()
-                                    if ebs.delete_on_termination == False ] )
-
-            ### you can use i.region instead of i._placement, but it pretty
-            ### prints to RegionInfo:us-east-1. For now, use the private version
-            ### XXX EVERY column in this output had better have a non-zero length
-            ### or texttable blows up with 'width must be greater than 0' error
-            table.add_row( [ i.id, i.tags.get( 'Name', ' ' ), i.instance_type,
-                             i._placement , i.groups[0].name, i.state,
-                             i.root_device_type, volumes or '-' ] )
-
-
-        ### table.draw() blows up if there is nothing to print
-        if instances or not self.args.no_header:
-            print table.draw()
 
     def add_cli_arguments(self, parser):
         # Call to the superclass first
@@ -200,6 +129,84 @@ class Application(krux_ec2.cli.Application):
             default=None,
             help="Exclude instances with these states (regex)",
         )
+
+    """
+    Convert options dictionary to use AWS filters as keys instead of CLI options.
+    """
+    def convert_args(self):
+        # Dictionary of options and values to put in the Filter
+        filter_dict = {}
+
+        # Add entries to filter_dict with key=AWS filters and value=option
+        # values for options that filter on inclusion
+        for opt in Application._OPTS:
+            if self.options[opt]:
+                aws_filter = Application._CLI_TO_AWS[opt]
+                filter_dict[aws_filter] = self.options[opt]
+
+        return filter_dict
+
+    """
+    Use filter_dict to filter instances based on inclusion/exclusion options
+    """
+    def filter_args(self, filter_dict):
+
+        f = Filter(filter_dict)
+
+        # Filter/find instances based on inclusion filters
+        instances = self.ec2.find_instances(f)
+
+        # Iterate through found instances and filter based on exclude options
+        for opt in Application._OPTS:
+            exclude_str = 'exclude_' + opt
+
+            if self.options[exclude_str]:
+                attribute = self.options[exclude_str]
+            else:
+                continue
+
+            # Exclude instances if they have an attribute that is excluded
+            instances = [
+                            i for i in instances if
+                            Application._INSTANCE_ATTR[opt](i) != attribute
+                        ]
+
+        return instances
+
+    """
+    Outputs filtered instances as a table
+    """
+    def output_table(self, instances):
+        table       = Texttable( max_width=0 )
+
+        table.set_deco( Texttable.HEADER )
+        table.set_cols_dtype( [ 't', 't', 't', 't', 't', 't', 't', 't' ] )
+        table.set_cols_align( [ 'l', 'l', 'l', 'l', 'l', 'l', 'l', 't' ] )
+
+        if not self.args.no_header:
+            # using add_row, so the headers aren't being centered, for easier grepping
+            table.add_row(
+                [ '# id', 'Name', 'Type', 'Zone', 'Group', 'State', 'Root', 'Volumes' ] )
+
+        for i in instances:
+
+            # XXX there's a bug where you can't get the size of the volumes, it's
+            # always reported as None :(
+            volumes = ", ".join( [ ebs.volume_id for ebs in i.block_device_mapping.values()
+                                    if ebs.delete_on_termination == False ] )
+
+            # you can use i.region instead of i._placement, but it pretty
+            # prints to RegionInfo:us-east-1. For now, use the private version
+            # XXX EVERY column in this output had better have a non-zero length
+            # or texttable blows up with 'width must be greater than 0' error
+            table.add_row( [ i.id, i.tags.get( 'Name', ' ' ), i.instance_type,
+                             i._placement , i.groups[0].name, i.state,
+                             i.root_device_type, volumes or '-' ] )
+
+
+        # table.draw() blows up if there is nothing to print
+        if instances or not self.args.no_header:
+            print table.draw()
 
     def run(self):
         filter_dict = self.convert_args()
