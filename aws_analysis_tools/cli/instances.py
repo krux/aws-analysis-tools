@@ -211,7 +211,7 @@ class Application(krux_ec2.cli.Application):
     def run(self):
         filter_dict = self.convert_args()
         instances = self.filter_args(filter_dict)
-        self.output_table_to_file(instances)
+        self.output_table(instances)
 
 
 def main():
