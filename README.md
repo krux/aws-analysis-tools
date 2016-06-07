@@ -1,6 +1,13 @@
 aws-analysis-tools
 ==================
-instances.py
+krux-ec2-instances
+------------------
+Returns all instances that match the search criteria given by the options.
+
+*** WARNING ***
+Following options have changed:
+- To specify a region, use option --boto-region instead of -r or --region.
+- To specify log level, use option --log-level instead of -v or --verbose.
 
 volumes.py
 

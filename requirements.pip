@@ -2,6 +2,7 @@
 
 krux-stdlib==2.2.1
 krux-boto==1.0.3
+krux-ec2==0.0.1
 
 PyYAML==3.11
 texttable==0.8.4
