@@ -130,10 +130,11 @@ class Application(krux_ec2.cli.Application):
             help="Exclude instances with these states (regex)",
         )
 
-    """
-    Convert options dictionary to use AWS filters as keys instead of CLI options.
-    """
     def convert_args(self):
+        """
+        Convert options dictionary to use AWS filters as keys instead of CLI options.
+        """
+
         # Dictionary of options and values to put in the Filter
         filter_dict = {}
 
@@ -146,11 +147,10 @@ class Application(krux_ec2.cli.Application):
 
         return filter_dict
 
-    """
-    Use filter_dict to filter instances based on inclusion/exclusion options
-    """
     def filter_args(self, filter_dict):
-
+        """
+        Use filter_dict to filter instances based on inclusion/exclusion options
+        """
         f = Filter(filter_dict)
 
         # Filter/find instances based on inclusion filters
@@ -173,10 +173,10 @@ class Application(krux_ec2.cli.Application):
 
         return instances
 
-    """
-    Outputs filtered instances as a table
-    """
     def output_table(self, instances):
+        """
+        Outputs filtered instances as a table
+        """
         table       = Texttable( max_width=0 )
 
         table.set_deco( Texttable.HEADER )
