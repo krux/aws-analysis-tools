@@ -8,6 +8,7 @@ Returns all instances that match the search criteria given by the options.
 Following options have changed:
 - To specify a region, use option --boto-region instead of -r or --region.
 - To specify log level, use option --log-level instead of -v or --verbose.
+- Filters are case sensitive, eg "-n krux" will not work if the name of the instance is "Krux"
 
 volumes.py
 
