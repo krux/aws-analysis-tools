@@ -12,7 +12,7 @@ from __future__ import absolute_import
 from setuptools import setup, find_packages
 
 # We use the version to construct the DOWNLOAD_URL.
-VERSION      = '0.4.3'
+VERSION      = '0.4.4'
 
 # URL to the repository on Github.
 REPO_URL     = 'https://github.com/krux/aws-analysis-tools'

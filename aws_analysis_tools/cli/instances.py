@@ -42,7 +42,7 @@ class Application(krux_ec2.cli.Application):
 
     # A dict with key=CLI options and value=instance attribute
     _INSTANCE_ATTR = {
-            'group': lambda i, attr: next((g.name for g in i.groups if g.name == attr), None),
+            'group': lambda i, attr: next((g.name for g in i.groups if attr in g.name), None),
             'name': lambda i, attr: i.tags.get('Name'),
             'type': lambda i, attr: i.instance_type,
             'zone': lambda i, attr: str(i._placement),
@@ -143,7 +143,8 @@ class Application(krux_ec2.cli.Application):
         for opt in Application._OPTS:
             if self.options[opt]:
                 aws_filter = Application._CLI_TO_AWS[opt]
-                filter_dict[aws_filter] = self.options[opt]
+                value = '*' + self.options[opt] + '*'
+                filter_dict[aws_filter] = value
 
         return filter_dict
 
@@ -167,8 +168,8 @@ class Application(krux_ec2.cli.Application):
 
             # Exclude instances if they have an attribute that is excluded
             instances = [
-                            i for i in instances if
-                            Application._INSTANCE_ATTR[opt](i, attribute) != attribute
+                            i for i in instances if  Application._INSTANCE_ATTR[opt](i, attribute) is None or
+                            attribute not in Application._INSTANCE_ATTR[opt](i, attribute)
                         ]
 
         return instances
