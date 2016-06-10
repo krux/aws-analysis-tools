@@ -30,24 +30,26 @@ class Application(krux_ec2.cli.Application):
 
     # A dict with key=CLI options and value=AWS filters
     _CLI_TO_AWS = {
-            'group': 'group-name',
-            'name': 'tag:Name',
-            'type': 'instance-type',
-            'zone': 'availability-zone',
-            'state': 'instance-state-name'
-        }
+        'group': 'group-name',
+        'name': 'tag:Name',
+        'type': 'instance-type',
+        'zone': 'availability-zone',
+        'state': 'instance-state-name'
+    }
 
     # List of all options
     _OPTS = ['group', 'name', 'type', 'zone', 'state']
 
     # A dict with key=CLI options and value=instance attribute
     _INSTANCE_ATTR = {
-            'group': lambda i, attr: next((g.name for g in i.groups if attr in g.name), None),
-            'name': lambda i, attr: i.tags.get('Name'),
-            'type': lambda i, attr: i.instance_type,
-            'zone': lambda i, attr: str(i._placement),
-            'state': lambda i, attr: i.state
-        }
+        'group': lambda i, attr: next((g.name for g in i.groups if attr in g.name), None),
+        'name': lambda i, attr: i.tags.get('Name'),
+        'type': lambda i, attr: i.instance_type,
+        'zone': lambda i, attr: str(i._placement),
+        'state': lambda i, attr: i.state
+    }
+
+    _EC2_FILTER_VALUE_TEMPLATE = '*{value}*'
 
     def __init__(self, name=NAME):
         # Call to the superclass to bootstrap.
@@ -143,7 +145,7 @@ class Application(krux_ec2.cli.Application):
         for opt in Application._OPTS:
             if self.options[opt]:
                 aws_filter = Application._CLI_TO_AWS[opt]
-                value = '*' + self.options[opt] + '*'
+                value = self._EC2_FILTER_VALUE_TEMPLATE.format(self.options[opt])
                 filter_dict[aws_filter] = value
 
         return filter_dict
