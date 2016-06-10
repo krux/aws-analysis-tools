@@ -23,6 +23,7 @@ import krux_boto
 import krux_ec2.cli
 from krux_ec2.filter import Filter
 
+
 NAME = 'instances'
 
 
@@ -180,32 +181,41 @@ class Application(krux_ec2.cli.Application):
         """
         Outputs filtered instances as a table
         """
-        table       = Texttable( max_width=0 )
+        table = Texttable(max_width=0)
 
-        table.set_deco( Texttable.HEADER )
-        table.set_cols_dtype( [ 't', 't', 't', 't', 't', 't', 't', 't' ] )
-        table.set_cols_align( [ 'l', 'l', 'l', 'l', 'l', 'l', 'l', 't' ] )
+        table.set_deco(Texttable.HEADER)
+        table.set_cols_dtype(['t', 't', 't', 't', 't', 't', 't', 't'])
+        table.set_cols_align(['l', 'l', 'l', 'l', 'l', 'l', 'l', 't'])
 
         if not self.args.no_header:
             # using add_row, so the headers aren't being centered, for easier grepping
             table.add_row(
-                [ '# id', 'Name', 'Type', 'Zone', 'Group', 'State', 'Root', 'Volumes' ] )
+                ['# id', 'Name', 'Type', 'Zone', 'Group', 'State', 'Root', 'Volumes']
+            )
 
         for i in instances:
 
             # XXX there's a bug where you can't get the size of the volumes, it's
             # always reported as None :(
-            volumes = ", ".join( [ ebs.volume_id for ebs in i.block_device_mapping.values()
-                                    if ebs.delete_on_termination == False ] )
+            volumes = ", ".join([
+                ebs.volume_id for ebs in i.block_device_mapping.values()
+                if not ebs.delete_on_termination
+            ])
 
             # you can use i.region instead of i._placement, but it pretty
             # prints to RegionInfo:us-east-1. For now, use the private version
             # XXX EVERY column in this output had better have a non-zero length
             # or texttable blows up with 'width must be greater than 0' error
-            table.add_row( [ i.id, i.tags.get( 'Name', ' ' ), i.instance_type,
-                             i._placement , i.groups[0].name, i.state,
-                             i.root_device_type, volumes or '-' ] )
-
+            table.add_row([
+                i.id,
+                i.tags.get('Name', ' '),
+                i.instance_type,
+                i._placement,
+                i.groups[0].name,
+                i.state,
+                i.root_device_type,
+                volumes or '-'
+            ])
 
         # table.draw() blows up if there is nothing to print
         if instances or not self.args.no_header:
