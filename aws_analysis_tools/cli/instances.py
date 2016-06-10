@@ -145,8 +145,7 @@ class Application(krux_ec2.cli.Application):
         for opt in Application._OPTS:
             if self.options[opt]:
                 aws_filter = Application._CLI_TO_AWS[opt]
-                value = self._EC2_FILTER_VALUE_TEMPLATE.format(self.options[opt])
-                filter_dict[aws_filter] = value
+                filter_dict[aws_filter] = self._EC2_FILTER_VALUE_TEMPLATE.format(value=self.options[opt])
 
         return filter_dict
 
@@ -170,7 +169,8 @@ class Application(krux_ec2.cli.Application):
 
             # Exclude instances if they have an attribute that is excluded
             instances = [
-                            i for i in instances if  Application._INSTANCE_ATTR[opt](i, attribute) is None or
+                            i for i in instances
+                            if Application._INSTANCE_ATTR[opt](i, attribute) is None or
                             attribute not in Application._INSTANCE_ATTR[opt](i, attribute)
                         ]
 
