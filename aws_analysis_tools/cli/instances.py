@@ -104,8 +104,8 @@ class Application(krux_ec2.cli.Application):
         group.add_argument(
             "--no-name",
             action="store_true",
-            default=[],
-            help="Exclude all instances with Name tag specificed",
+            default=False,
+            help="Exclude all instances with Name tag specified",
         )
 
         group.add_argument(
