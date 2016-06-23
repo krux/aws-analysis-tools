@@ -75,62 +75,79 @@ class Application(krux_ec2.cli.Application):
 
         group.add_argument(
             "-g", "--group",
-            default=None,
-            help="Include instances from these groups only (regex)",
+            action="append",
+            default=[],
+            help="Include instances from groups whose name include these characters only",
         )
 
         group.add_argument(
             "-G", "--exclude-group",
-            default=None,
-            help="Exclude instances from these groups (regex)",
+            action="append",
+            default=[],
+            help="Exclude instances from groups whose name include these characters ",
         )
 
         group.add_argument(
             "-n", "--name",
-            default=None,
-            help="Include instances with these names only (regex)",
+            action="append",
+            default=[],
+            help="Include instances whose name include these characters only",
         )
 
         group.add_argument(
             "-N", "--exclude-name",
-            default=None,
-            help="Exclude instances with these names (regex)",
+            action="append",
+            default=[],
+            help="Exclude instances whose name include these characters",
+        )
+
+        group.add_argument(
+            "--no-name",
+            action="store_true",
+            default=False,
+            help="Exclude all instances with Name tag specified",
         )
 
         group.add_argument(
             "-t", "--type",
-            default=None,
-            help="Include instances with these types only (regex)",
+            action="append",
+            default=[],
+            help="Include instances with types whose name include these characters only",
         )
 
         group.add_argument(
             "-T", "--exclude-type",
-            default=None,
-            help="Exclude instances with these types (regex)",
+            action="append",
+            default=[],
+            help="Exclude instances with types whose name include these characters",
         )
 
         group.add_argument(
             "-z", "--zone",
-            default=None,
-            help="Include instances with these zones only (regex)",
+            action="append",
+            default=[],
+            help="Include instances with zones whose name include these characters only",
         )
 
         group.add_argument(
             "-Z", "--exclude-zone",
-            default=None,
-            help="Exclude instances with these zones (regex)",
+            action="append",
+            default=[],
+            help="Exclude instances with zones whose name include these characters",
         )
 
         group.add_argument(
             "-s", "--state",
-            default=None,
-            help="Include instances with these states only (regex)",
+            action="append",
+            default=[],
+            help="Include instances with states whose name include these characters only",
         )
 
         group.add_argument(
             "-S", "--exclude-state",
-            default=None,
-            help="Exclude instances with these states (regex)",
+            action="append",
+            default=[],
+            help="Exclude instances with states whose name include these characters",
         )
 
     def convert_args(self):
@@ -139,41 +156,50 @@ class Application(krux_ec2.cli.Application):
         """
 
         # Dictionary of options and values to put in the Filter
-        filter_dict = {}
+        include_filter = Filter()
 
-        # Add entries to filter_dict with key=AWS filters and value=option
+        # Add entries to include_filter with key=AWS filters and value=option
         # values for options that filter on inclusion
-        for opt in Application._OPTS:
-            if self.options[opt]:
-                aws_filter = Application._CLI_TO_AWS[opt]
-                filter_dict[aws_filter] = self._EC2_FILTER_VALUE_TEMPLATE.format(value=self.options[opt])
+        for opt_name in Application._OPTS:
+            for opt_value in self.options[opt_name]:
+                include_filter.add_filter(
+                    name=Application._CLI_TO_AWS[opt_name],
+                    value=self._EC2_FILTER_VALUE_TEMPLATE.format(value=opt_value)
+                )
 
-        return filter_dict
+        return include_filter
 
-    def filter_args(self, filter_dict):
+    def filter_args(self, include_filter):
         """
-        Use filter_dict to filter instances based on inclusion/exclusion options
+        Use include_filter to filter instances based on inclusion/exclusion options
         """
-        f = Filter(filter_dict)
 
         # Filter/find instances based on inclusion filters
-        instances = self.ec2.find_instances(f)
+        instances = self.ec2.find_instances(include_filter)
+
+        if self.options.get('no_name', False):
+            self.logger.debug(
+                'Excluding instances from the list of %s instances based on filter (%s)',
+                len(instances), 'no_name'
+            )
+            instances = [i for i in instances if 'Name' not in i.tags]
 
         # Iterate through found instances and filter based on exclude options
         for opt in Application._OPTS:
-            exclude_str = 'exclude_' + opt
+            opt_name = 'exclude_' + opt
+            opt_values = self.options[opt_name]
 
-            if self.options[exclude_str]:
-                attribute = self.options[exclude_str]
-            else:
-                continue
-
-            # Exclude instances if they have an attribute that is excluded
-            instances = [
-                            i for i in instances
-                            if Application._INSTANCE_ATTR[opt](i, attribute) is None or
-                            attribute not in Application._INSTANCE_ATTR[opt](i, attribute)
-                        ]
+            self.logger.debug(
+                'Excluding instances from the list of %s instances based on filter (%s: %s)',
+                len(instances), opt_name, opt_values,
+            )
+            for opt_value in opt_values:
+                # Exclude instances if they have an attribute that is excluded
+                instances = [
+                                i for i in instances
+                                if Application._INSTANCE_ATTR[opt](i, opt_value) is None or
+                                opt_value not in Application._INSTANCE_ATTR[opt](i, opt_value)
+                            ]
 
         return instances
 
@@ -222,8 +248,10 @@ class Application(krux_ec2.cli.Application):
             print table.draw()
 
     def run(self):
-        filter_dict = self.convert_args()
-        instances = self.filter_args(filter_dict)
+        self.logger.debug('Parsed arguments: %s', self.args)
+
+        include_filter = self.convert_args()
+        instances = self.filter_args(include_filter)
         self.output_table(instances)
 
 
