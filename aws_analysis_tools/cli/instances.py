@@ -102,6 +102,13 @@ class Application(krux_ec2.cli.Application):
         )
 
         group.add_argument(
+            "--no-name",
+            action="store_true",
+            default=[],
+            help="Exclude all instances with Name tag specificed",
+        )
+
+        group.add_argument(
             "-t", "--type",
             action="append",
             default=[],
@@ -169,6 +176,13 @@ class Application(krux_ec2.cli.Application):
 
         # Filter/find instances based on inclusion filters
         instances = self.ec2.find_instances(include_filter)
+
+        if self.options.get('no_name', False):
+            self.logger.debug(
+                'Excluding instances from the list of %s instances based on filter (%s)',
+                len(instances), 'no_name'
+            )
+            instances = [i for i in instances if 'Name' not in i.tags]
 
         # Iterate through found instances and filter based on exclude options
         for opt in Application._OPTS:
