@@ -1,179 +1,265 @@
-#!/usr/bin/env kaws-python
+# -*- coding: utf-8 -*-
+#
+# © 2016 Krux Digital, Inc.
+#
 
-import re
-import sys
-import logging
+#
+# Standard libraries
+#
 
-import boto.ec2
+from __future__ import absolute_import
 
-from texttable  import Texttable
-from pprint     import PrettyPrinter
-from optparse   import OptionParser
+#
+# Third party libraries
+#
 
-PP = PrettyPrinter( indent=2 )
+from texttable import Texttable
 
-###################
-### Arg parsing
-###################
+#
+# Internal libraries
+#
 
-parser = OptionParser("usage: %prog [options]" )
-parser.add_option(  "-v", "--verbose",      default=None, action="store_true",
-                    help="enable debug output" )
-parser.add_option(  "-H", "--no-header",    default=None, action="store_true",
-                    help="suppress table header" )
-parser.add_option(  "-r", "--region",       default='us-east-1',
-                    help="ec2 region to connect to" )
-parser.add_option(  "-g", "--group",        default=None,
-                    help="Include instances from these groups only (regex)" )
-parser.add_option(  "-G", "--exclude-group",default=None,
-                    help="Exclude instances from these groups (regex)" )
-parser.add_option(  "-n", "--name",         default=None,
-                    help="Include instances with these names only (regex)" )
-parser.add_option(  "-N", "--exclude-name", default=None,
-                    help="Exclude instances with these names (regex)" )
-parser.add_option(  "-t", "--type",         default=None,
-                    help="Include instances with these types only (regex)" )
-parser.add_option(  "-T", "--exclude-type", default=None,
-                    help="Exclude instances with these types (regex)" )
-parser.add_option(  "-z", "--zone",         default=None,
-                    help="Include instances with these zones only (regex)" )
-parser.add_option(  "-Z", "--exclude-zone", default=None,
-                    help="Exclude instances with these zones (regex)" )
-parser.add_option(  "-s", "--state",        default=None,
-                    help="Include instances with these states only (regex)" )
-parser.add_option(  "-S", "--exclude-state",default=None,
-                    help="Exclude instances with these states (regex)" )
+import krux_boto
+import krux_ec2.cli
+from krux_ec2.filter import Filter
 
 
-(options, args) = parser.parse_args()
-
-###################
-### Logging
-###################
-
-if options.verbose: log_level = logging.DEBUG
-else:               log_level = logging.INFO
-
-logging.basicConfig(stream=sys.stdout, level=log_level)
-logging.basicConfig(stream=sys.stderr, level=(logging.ERROR,logging.CRITICAL))
+NAME = 'instances'
 
 
-###################
-### Connection
-###################
+class Application(krux_ec2.cli.Application):
 
-conn = boto.ec2.connect_to_region( options.region )
+    # A dict with key=CLI options and value=AWS filters
+    _CLI_TO_AWS = {
+        'group': 'group-name',
+        'name': 'tag:Name',
+        'type': 'instance-type',
+        'zone': 'availability-zone',
+        'state': 'instance-state-name'
+    }
 
-###################
-### Regexes
-###################
+    # List of all options
+    _OPTS = ['group', 'name', 'type', 'zone', 'state']
 
-regexes = {}
-for opt in [ 'group', 'exclude_group', 'name', 'exclude_name',
-             'type',  'exclude_type',  'zone', 'exclude_zone',
-             'state', 'exclude_state' ]:
+    # A dict with key=CLI options and value=instance attribute
+    _INSTANCE_ATTR = {
+        'group': lambda i, attr: next((g.name for g in i.groups if attr in g.name), None),
+        'name': lambda i, attr: i.tags.get('Name'),
+        'type': lambda i, attr: i.instance_type,
+        'zone': lambda i, attr: str(i._placement),
+        'state': lambda i, attr: i.state
+    }
 
-    ### we have a regex we should build
-    if options.__dict__.get( opt, None ):
-        regexes[ opt ] = re.compile( options.__dict__.get( opt ), re.IGNORECASE )
+    _EC2_FILTER_VALUE_TEMPLATE = '*{value}*'
 
-#PP.pprint( regexes )
+    def __init__(self, name=NAME):
+        # Call to the superclass to bootstrap.
+        super(Application, self).__init__(name=name)
 
-def get_instances():
-    instances   = [ i for r in conn.get_all_instances()
-                        for i in r.instances ]
+        # Change self.args into a dict so you can fetch values using
+        # keys instead of attributes
+        self.options = vars(self.args)
 
-    rv          = [];
-    for i in instances:
+    def add_cli_arguments(self, parser):
+        # Call to the superclass first
+        super(Application, self).add_cli_arguments(parser)
 
-        ### we will assume this node is one of the nodes we want
-        ### to operate on, and we will unset this flag if any of
-        ### the criteria fail
-        wanted_node = True
+        group = krux_ec2.cli.get_group(parser, self.name)
 
-        for re_name, regex in regexes.iteritems():
+        group.add_argument(
+            "-H", "--no-header",
+            default=None,
+            action="store_true",
+            help="suppress table header",
+        )
 
-            ### What's the value we will be testing against?
-            if re.search( 'group', re_name ):
-                value = i.groups[0].name
-            elif re.search( 'name', re_name ):
-                value = i.tags.get( 'Name', '' )
-            elif re.search( 'type', re_name ):
-                value = i.instance_type
-            elif re.search( 'state', re_name ):
-                value = i.state
-            elif re.search( 'zone', re_name ):
-                ### i.region is an object. i._placement is a string.
-                value = str(i._placement)
+        group.add_argument(
+            "-g", "--group",
+            action="append",
+            default=[],
+            help="Include instances from groups whose name include these characters only",
+        )
 
-            else:
-                logging.error( "Don't know what to do with: %s" % re_name )
-                continue
+        group.add_argument(
+            "-G", "--exclude-group",
+            action="append",
+            default=[],
+            help="Exclude instances from groups whose name include these characters ",
+        )
 
-            #PP.pprint( "name = %s value = %s pattern = %s" % ( re_name, value, regex.pattern ) )
+        group.add_argument(
+            "-n", "--name",
+            action="append",
+            default=[],
+            help="Include instances whose name include these characters only",
+        )
 
-            ### Should the regex match or not match?
-            if re.search( 'exclude', re_name ):
-                rv_value = None
-            else:
-                rv_value = True
+        group.add_argument(
+            "-N", "--exclude-name",
+            action="append",
+            default=[],
+            help="Exclude instances whose name include these characters",
+        )
 
-            ### if the match is not what we expect, then clearly we
-            ### don't care about the node
-            result = regex.search( value )
+        group.add_argument(
+            "--no-name",
+            action="store_true",
+            default=False,
+            help="Exclude all instances with Name tag specified",
+        )
 
-            ### we expected to get no results, excellent
-            if result == None and rv_value == None:
-                pass
+        group.add_argument(
+            "-t", "--type",
+            action="append",
+            default=[],
+            help="Include instances with types whose name include these characters only",
+        )
 
-            ### we expected to get some match, excellent
-            elif result is not None and rv_value is not None:
-                pass
+        group.add_argument(
+            "-T", "--exclude-type",
+            action="append",
+            default=[],
+            help="Exclude instances with types whose name include these characters",
+        )
 
-            ### we don't care about this node
-            else:
-                wanted_node = False
-                break
+        group.add_argument(
+            "-z", "--zone",
+            action="append",
+            default=[],
+            help="Include instances with zones whose name include these characters only",
+        )
 
-        if wanted_node:
-            rv.append( i )
+        group.add_argument(
+            "-Z", "--exclude-zone",
+            action="append",
+            default=[],
+            help="Exclude instances with zones whose name include these characters",
+        )
 
-    return rv
+        group.add_argument(
+            "-s", "--state",
+            action="append",
+            default=[],
+            help="Include instances with states whose name include these characters only",
+        )
 
-def list_instances():
-    table       = Texttable( max_width=0 )
+        group.add_argument(
+            "-S", "--exclude-state",
+            action="append",
+            default=[],
+            help="Exclude instances with states whose name include these characters",
+        )
 
-    table.set_deco( Texttable.HEADER )
-    table.set_cols_dtype( [ 't', 't', 't', 't', 't', 't', 't', 't' ] )
-    table.set_cols_align( [ 'l', 'l', 'l', 'l', 'l', 'l', 'l', 't' ] )
+    def convert_args(self):
+        """
+        Convert options dictionary to use AWS filters as keys instead of CLI options.
+        """
 
-    if not options.no_header:
-        ### using add_row, so the headers aren't being centered, for easier grepping
-        table.add_row(
-            [ '# id', 'Name', 'Type', 'Zone', 'Group', 'State', 'Root', 'Volumes' ] )
+        # Dictionary of options and values to put in the Filter
+        include_filter = Filter()
 
-    instances = get_instances()
-    for i in instances:
+        # Add entries to include_filter with key=AWS filters and value=option
+        # values for options that filter on inclusion
+        for opt_name in Application._OPTS:
+            for opt_value in self.options[opt_name]:
+                include_filter.add_filter(
+                    name=Application._CLI_TO_AWS[opt_name],
+                    value=self._EC2_FILTER_VALUE_TEMPLATE.format(value=opt_value)
+                )
 
-        ### XXX there's a bug where you can't get the size of the volumes, it's
-        ### always reported as None :(
-        volumes = ", ".join( [ ebs.volume_id for ebs in i.block_device_mapping.values()
-                                if ebs.delete_on_termination == False ] )
+        return include_filter
 
-        ### you can use i.region instead of i._placement, but it pretty
-        ### prints to RegionInfo:us-east-1. For now, use the private version
-        ### XXX EVERY column in this output had better have a non-zero length
-        ### or texttable blows up with 'width must be greater than 0' error
-        table.add_row( [ i.id, i.tags.get( 'Name', ' ' ), i.instance_type,
-                         i._placement , i.groups[0].name, i.state,
-                         i.root_device_type, volumes or '-' ] )
+    def filter_args(self, include_filter):
+        """
+        Use include_filter to filter instances based on inclusion/exclusion options
+        """
 
-        #PP.pprint( i.__dict__ )
+        # Filter/find instances based on inclusion filters
+        instances = self.ec2.find_instances(include_filter)
 
-    ### table.draw() blows up if there is nothing to print
-    if instances or not options.no_header:
-        print table.draw()
+        if self.options.get('no_name', False):
+            self.logger.debug(
+                'Excluding instances from the list of %s instances based on filter (%s)',
+                len(instances), 'no_name'
+            )
+            instances = [i for i in instances if 'Name' not in i.tags]
+
+        # Iterate through found instances and filter based on exclude options
+        for opt in Application._OPTS:
+            opt_name = 'exclude_' + opt
+            opt_values = self.options[opt_name]
+
+            self.logger.debug(
+                'Excluding instances from the list of %s instances based on filter (%s: %s)',
+                len(instances), opt_name, opt_values,
+            )
+            for opt_value in opt_values:
+                # Exclude instances if they have an attribute that is excluded
+                instances = [
+                                i for i in instances
+                                if Application._INSTANCE_ATTR[opt](i, opt_value) is None or
+                                opt_value not in Application._INSTANCE_ATTR[opt](i, opt_value)
+                            ]
+
+        return instances
+
+    def output_table(self, instances):
+        """
+        Outputs filtered instances as a table
+        """
+        table = Texttable(max_width=0)
+
+        table.set_deco(Texttable.HEADER)
+        table.set_cols_dtype(['t', 't', 't', 't', 't', 't', 't', 't'])
+        table.set_cols_align(['l', 'l', 'l', 'l', 'l', 'l', 'l', 't'])
+
+        if not self.args.no_header:
+            # using add_row, so the headers aren't being centered, for easier grepping
+            table.add_row(
+                ['# id', 'Name', 'Type', 'Zone', 'Group', 'State', 'Root', 'Volumes']
+            )
+
+        for i in instances:
+
+            # XXX there's a bug where you can't get the size of the volumes, it's
+            # always reported as None :(
+            volumes = ", ".join([
+                ebs.volume_id for ebs in i.block_device_mapping.values()
+                if not ebs.delete_on_termination
+            ])
+
+            # you can use i.region instead of i._placement, but it pretty
+            # prints to RegionInfo:us-east-1. For now, use the private version
+            # XXX EVERY column in this output had better have a non-zero length
+            # or texttable blows up with 'width must be greater than 0' error
+            table.add_row([
+                i.id,
+                i.tags.get('Name', ' '),
+                i.instance_type,
+                i._placement,
+                i.groups[0].name,
+                i.state,
+                i.root_device_type,
+                volumes or '-'
+            ])
+
+        # table.draw() blows up if there is nothing to print
+        if instances or not self.args.no_header:
+            print table.draw()
+
+    def run(self):
+        self.logger.debug('Parsed arguments: %s', self.args)
+
+        include_filter = self.convert_args()
+        instances = self.filter_args(include_filter)
+        self.output_table(instances)
+
+
+def main():
+    app = Application()
+    # with app.context():
+    app.run()
+
 
 if __name__ == '__main__':
-    list_instances()
-
+    main()
