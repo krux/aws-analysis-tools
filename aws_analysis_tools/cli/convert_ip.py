@@ -29,6 +29,7 @@ class Application(krux_ec2.cli.Application):
         # Call to the superclass to bootstrap.
         super(Application, self).__init__(name=name)
 
+        # Set what AWS arg to filter based on
         self.filter_arg = Application._PRIVATE_IP if self.args.private else Application._IP
 
     def add_cli_arguments(self, parser):
@@ -48,10 +49,13 @@ class Application(krux_ec2.cli.Application):
             "-p", "--private",
             action='store_true',
             default=False,
-            help="True if the given IP address is private. Default: %(default)s",
+            help="True if the given IP address is private. (default: %(default)s)",
         )
 
     def find_instance(self, filter_arg, address):
+        """
+        Searches for AWS instance based on given filter argument and ip address (private or normal).
+        """
         f = Filter()
         f.add_filter(
             name=filter_arg,
@@ -60,15 +64,19 @@ class Application(krux_ec2.cli.Application):
         return self.ec2.find_instances(f)
 
     def output_info(self, instances, filter_arg, address):
+        """
+        Given a list of instances, prints out each instance's name, IP address, private IP address,
+        and DNS name in a dictionary.
+        """
         if len(instances) != 0:
-            i = instances[0]
-            ip_info = {
-                'Instance Name': str(i.tags.get('Name', '')),
-                'IP Address': str(i.ip_address),
-                'Private IP Address': str(i.private_ip_address),
-                'DNS Name': str(i.dns_name),
-            }
-            self.logger.info('\n' + pformat(ip_info))
+            for i in instances:
+                ip_info = {
+                    'Instance Name': str(i.tags.get('Name', '')),
+                    'IP Address': str(i.ip_address),
+                    'Private IP Address': str(i.private_ip_address),
+                    'DNS Name': str(i.dns_name),
+                }
+                self.logger.info('\n' + pformat(ip_info))
 
         else:
             self.logger.error('No instance with ' + filter_arg + ': ' + address + ' was found.')
