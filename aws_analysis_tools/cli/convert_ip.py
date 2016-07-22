@@ -52,7 +52,7 @@ class Application(krux_ec2.cli.Application):
             help="True if the given IP address is private. (default: %(default)s)",
         )
 
-    def find_instance(self, filter_arg, address):
+    def find_instances(self, filter_arg, address):
         """
         Searches for AWS instance based on given filter argument and ip address (private or normal).
         """
@@ -82,8 +82,9 @@ class Application(krux_ec2.cli.Application):
             self.logger.error('No instance with ' + filter_arg + ': ' + address + ' was found.')
 
     def run(self):
-        instances = self.find_instance(self.filter_arg, self.args.ip_address)
+        instances = self.find_instances(self.filter_arg, self.args.ip_address)
         self.output_info(instances, self.filter_arg, self.args.ip_address)
+
 
 def main():
     app = Application()
