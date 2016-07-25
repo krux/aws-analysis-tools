@@ -10,6 +10,7 @@
 from __future__ import absolute_import
 import unittest
 import sys
+from pprint import pformat
 
 #
 # Third party libraries
@@ -26,15 +27,22 @@ from krux.stats import DummyStatsClient
 
 class ConvertIPtest(unittest.TestCase):
 
+    LOG_LEVEL = 'info'
+    IP = 'ip-address'
+    PRIVATE_IP = 'private-ip-address'
+    IP_ADDRESS = '123.456.789'
+    INSTANCES_LIST = ['1', '2', '3']
+    INSTANCE_NAME = 'instance_1.krxd.net'
+    INSTANCE_DNS = 'instance_1_dns'
+
+    @patch('sys.argv', ['krux-ec2-ip', '123.456.789'])
     def setUp(self):
         self.app = Application()
 
-    def test_init_(self):
+    def test_init_ip(self):
         """
-        Application is only created with the checker when no CLI arguments are passed
+        Application is instantiated with a normal ip address
         """
-        self.app.args.private = None
-
         # There are not much we can test except all the objects are under the correct name
         self.assertEqual(NAME, self.app.name)
         self.assertEqual(NAME, self.app.parser.description)
@@ -42,72 +50,96 @@ class ConvertIPtest(unittest.TestCase):
         self.assertIsInstance(self.app.stats, DummyStatsClient)
         self.assertEqual(NAME, self.app.logger.name)
 
-        self.assertEqual(self.app.filter_arg, self._IP)
+        self.assertEqual(self.app.filter_arg, self.IP)
 
-    # @patch.object(sys, 'argv', ['prog', '--jira-username', JIRA_USERNAME, '--jira-password', JIRA_PASSWORD, '--jira-base-url', JIRA_BASE_URL, '--flowdock-token', FLOW_TOKEN, '--urgent', FLOW_URGENT])
-    # @patch('aws_analysis_tools.ec2_events.cli.EC2EventChecker')
-    # @patch('aws_analysis_tools.ec2_events.cli.FlowdockListener')
-    # @patch('aws_analysis_tools.ec2_events.cli.JiraListener')
-    # def test_init_all_set(self, mock_jira, mock_flowdock, mock_checker):
-    #     """
-    #     Flowdock and JIRA listeners are created correctly when all CLI arguments are passed
-    #     """
-    #     app = Application()
+    @patch('sys.argv', ['krux-ec2-ip', '123.456.789', '--private'])
+    def test_init_private_ip(self):
+        """
+        Application is instantiated with a private ip address
+        """
+        app = Application()
 
-    #     mock_checker.assert_called_once_with(
-    #         boto=app.boto,
-    #         name=NAME,
-    #         logger=app.logger,
-    #         stats=app.stats
-    #     )
-    #     mock_flowdock.assert_called_once_with(
-    #         flow_token=self.FLOW_TOKEN,
-    #         name=NAME,
-    #         logger=app.logger,
-    #         stats=app.stats
-    #     )
-    #     self.assertEqual(mock_flowdock.return_value.urgent_threshold, int(self.FLOW_URGENT))
-    #     mock_jira.assert_called_once_with(
-    #         username=self.JIRA_USERNAME,
-    #         password=self.JIRA_PASSWORD,
-    #         base_url=self.JIRA_BASE_URL,
-    #         name=NAME,
-    #         logger=app.logger,
-    #         stats=app.stats
-    #     )
+        self.assertEqual(app.filter_arg, self.PRIVATE_IP)
 
-    # def test_add_cli_arguments(self):
-    #     """
-    #     All arguments from the checkers and listeners are present in the args
-    #     """
-    #     app = Application()
+    @patch('aws_analysis_tools.cli.convert_ip.Filter')
+    def test_find_instances(self, mock_filter):
+        """
+        Filter is created correctly and find_instances is called on it
+        """
+        self.app.ec2.find_instances = MagicMock()
 
-    #     self.assertIn('flowdock_token', app.args)
-    #     self.assertIn('jira_username', app.args)
-    #     self.assertIn('jira_password', app.args)
-    #     self.assertIn('jira_base_url', app.args)
+        self.app.find_instances(self.IP, self.IP_ADDRESS)
 
-    # def test_run(self):
-    #     """
-    #     Checker's check() method is correctly called in app.run()
-    #     """
-    #     checker = MagicMock()
+        mock_filter.assert_called_once_with()
+        mock_filter.return_value.add_filter.assert_called_once_with(name=self.IP, value=self.IP_ADDRESS)
 
-    #     with patch('aws_analysis_tools.ec2_events.cli.EC2EventChecker', return_value=checker):
-    #         app = Application()
-    #         app.run()
+        self.app.ec2.find_instances.assert_called_once_with(mock_filter.return_value)
 
-    #     checker.check.assert_called_once_with()
+    def test_output_info(self):
+        """
+        Output info called with instances outputs the desired information
+        """
+        self.app.logger = MagicMock()
+        i = MagicMock()
 
-    # def test_main(self):
-    #     """
-    #     Application is instantiated and run() is called in main()
-    #     """
-    #     app = MagicMock()
-    #     app_class = MagicMock(return_value=app)
+        i.tags['Name'] = self.INSTANCE_NAME
+        i.ip_address = self.IP_ADDRESS
+        i.private_ip_address = self.IP_ADDRESS
+        i.dns_name = self.INSTANCE_DNS
 
-    #     with patch('aws_analysis_tools.ec2_events.cli.Application', app_class):
-    #         main()
+        self.app.output_info([i], self.IP, self.IP_ADDRESS)
+        ip_info = {
+            'Instance Name': str(i.tags.get('Name', '')),
+            'IP Address': str(i.ip_address),
+            'Private IP Address': str(i.private_ip_address),
+            'DNS Name': str(i.dns_name),
+        }
+        self.app.logger.info.assert_called_once_with('\n'+ pformat(ip_info))
 
-    #     app_class.assert_called_once_with()
-    #     app.run.assert_called_once_with()
+
+    def test_output_info_no_instances(self):
+        """
+        Output info called with no instances logs the error
+        """
+        self.app.logger = MagicMock()
+
+        self.app.output_info([], self.IP, self.IP_ADDRESS)
+
+        msg = 'No instance with {0}: {1} was found.'.format(self.IP, self.IP_ADDRESS)
+        self.app.logger.error.assert_called_once_with(msg)
+
+
+    def test_add_cli_arguments(self):
+        """
+        All convert_ip options are present in the args
+        """
+        self.assertEqual(self.app.parser._defaults['log_level'], self.LOG_LEVEL)
+
+        self.assertIn('ip_address', self.app.args)
+        self.assertIn('private', self.app.args)
+
+    @patch('aws_analysis_tools.cli.convert_ip.Application.find_instances')
+    @patch('aws_analysis_tools.cli.convert_ip.Application.output_info')
+    def test_run(self, mock_output, mock_find):
+        """
+        find_instances and output_info are correctly called in run
+        """
+        mock_find.return_value = self.INSTANCES_LIST
+
+        self.app.run()
+
+        mock_find.assert_called_once_with(self.IP, self.IP_ADDRESS)
+        mock_output.assert_called_once_with(self.INSTANCES_LIST, self.IP, self.IP_ADDRESS)
+
+    def test_main(self):
+        """
+        Application convert_ip is instantiated and run() is called in main()
+        """
+        app = MagicMock()
+        app_class = MagicMock(return_value=app)
+
+        with patch('aws_analysis_tools.cli.convert_ip.Application', app_class):
+            main()
+
+        app_class.assert_called_once_with()
+        app.run.assert_called_once_with()
