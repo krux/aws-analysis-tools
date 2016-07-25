@@ -114,7 +114,7 @@ class ConvertIPtest(unittest.TestCase):
         self.app.output_info([], self.IP, self.IP_ADDRESS)
 
         msg = 'No instance with {0}: {1} was found.'.format(self.IP, self.IP_ADDRESS)
-        self.app.logger.error.assert_called_once_with(msg)
+        self.app.logger.info.assert_called_once_with(msg)
 
 
     def test_add_cli_arguments(self):

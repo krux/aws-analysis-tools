@@ -79,7 +79,7 @@ class Application(krux_ec2.cli.Application):
                 self.logger.info('\n' + pformat(ip_info))
 
         else:
-            self.logger.error('No instance with ' + filter_arg + ': ' + address + ' was found.')
+            self.logger.info('No instance with ' + filter_arg + ': ' + address + ' was found.')
 
     def run(self):
         instances = self.find_instances(self.filter_arg, self.args.ip_address)
