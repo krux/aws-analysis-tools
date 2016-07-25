@@ -16,7 +16,7 @@ from pprint import pformat
 # Third party libraries
 #
 
-from mock import MagicMock, patch
+from mock import MagicMock, patch, call
 
 #
 # Internal libraries
@@ -32,10 +32,9 @@ class ConvertIPtest(unittest.TestCase):
     PRIVATE_IP = 'private-ip-address'
     IP_ADDRESS = '123.456.789'
     INSTANCES_LIST = ['1', '2', '3']
-    INSTANCE_NAME = 'instance_1.krxd.net'
-    INSTANCE_DNS = 'instance_1_dns'
+    INSTANCE_DNS = 'instance_dns'
 
-    @patch('sys.argv', ['krux-ec2-ip', '123.456.789'])
+    @patch('sys.argv', ['krux-ec2-ip', IP_ADDRESS])
     def setUp(self):
         self.app = Application()
 
@@ -52,7 +51,7 @@ class ConvertIPtest(unittest.TestCase):
 
         self.assertEqual(self.app.filter_arg, self.IP)
 
-    @patch('sys.argv', ['krux-ec2-ip', '123.456.789', '--private'])
+    @patch('sys.argv', ['krux-ec2-ip', IP_ADDRESS, '--private'])
     def test_init_private_ip(self):
         """
         Application is instantiated with a private ip address
@@ -80,22 +79,31 @@ class ConvertIPtest(unittest.TestCase):
         Output info called with instances outputs the desired information
         """
         self.app.logger = MagicMock()
-        i = MagicMock()
+        instances = [MagicMock(), MagicMock(), MagicMock()]
 
-        i.tags['Name'] = self.INSTANCE_NAME
-        i.ip_address = self.IP_ADDRESS
-        i.private_ip_address = self.IP_ADDRESS
-        i.dns_name = self.INSTANCE_DNS
+        index = 0
+        for i in instances:
+            i.tags.get.return_value = 'instances' + str(index)
+            i.ip_address = self.IP_ADDRESS
+            i.private_ip_address = self.IP_ADDRESS
+            i.dns_name = self.INSTANCE_DNS
 
-        self.app.output_info([i, i, i], self.IP, self.IP_ADDRESS)
-        ip_info = {
-            'Instance Name': str(i.tags.get('Name', '')),
-            'IP Address': str(i.ip_address),
-            'Private IP Address': str(i.private_ip_address),
-            'DNS Name': str(i.dns_name),
-        }
-        self.app.logger.info.assert_called_with('\n'+ pformat(ip_info))
-        self.assertEqual(self.app.logger.info.call_count, 3)
+            index += 1
+
+        self.app.logger.info = MagicMock()
+        self.app.output_info(instances, self.IP, self.IP_ADDRESS)
+
+        calls = []
+        for i in instances:
+            ip_info = {
+                'Instance Name': str(i.tags.get('Name', '')),
+                'IP Address': str(i.ip_address),
+                'Private IP Address': str(i.private_ip_address),
+                'DNS Name': str(i.dns_name),
+            }
+            calls.append(call('\n' + pformat(ip_info)))
+
+        self.app.logger.info.assert_has_calls(calls)
 
     def test_output_info_no_instances(self):
         """
