@@ -87,15 +87,15 @@ class ConvertIPtest(unittest.TestCase):
         i.private_ip_address = self.IP_ADDRESS
         i.dns_name = self.INSTANCE_DNS
 
-        self.app.output_info([i], self.IP, self.IP_ADDRESS)
+        self.app.output_info([i, i, i], self.IP, self.IP_ADDRESS)
         ip_info = {
             'Instance Name': str(i.tags.get('Name', '')),
             'IP Address': str(i.ip_address),
             'Private IP Address': str(i.private_ip_address),
             'DNS Name': str(i.dns_name),
         }
-        self.app.logger.info.assert_called_once_with('\n'+ pformat(ip_info))
-
+        self.app.logger.info.assert_called_with('\n'+ pformat(ip_info))
+        self.assertEqual(self.app.logger.info.call_count, 3)
 
     def test_output_info_no_instances(self):
         """
