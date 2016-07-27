@@ -12,7 +12,7 @@ from __future__ import absolute_import
 from setuptools import setup, find_packages
 
 # We use the version to construct the DOWNLOAD_URL.
-VERSION      = '0.4.5'
+VERSION      = '0.5.0'
 
 # URL to the repository on Github.
 REPO_URL     = 'https://github.com/krux/aws-analysis-tools'
@@ -44,6 +44,7 @@ setup(
             'krux-ec2-pssh2          = aws_analysis_tools.cli.pssh2:main',
             'krux-ec2-events         = aws_analysis_tools.ec2_events.cli:main',
             'krux-ec2-test-provision = aws_analysis_tools.cli.test_provision:main',
+            'krux-ec2-ip             = aws_analysis_tools.cli.convert_ip:main',
         ],
     },
 )
