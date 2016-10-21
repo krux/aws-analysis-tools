@@ -95,12 +95,12 @@ class Application(krux_boto.Application):
         stats = self.stats
 
         # from cli or passed explicitly?
-        ec2_region = ec2_region or self.ec2_region
-        instance_id = instance_id or self.instance_id
-        classes = classes or self.classes
-        dry_run = dry_run or self.dry_run
-        environment = environment or self.environment
-        cluster_name = cluster_name or self.cluster_name
+        ec2_region = ec2_region if ec2_region is not None else self.ec2_region
+        instance_id = instance_id if instance_id is not None else self.instance_id
+        classes = classes if classes is not None else self.classes
+        dry_run = dry_run if dry_run is not None else self.dry_run
+        environment = environment if environment is not None else self.environment
+        cluster_name = cluster_name if cluster_name is not None else self.cluster_name
 
         with stats.timing('update_tags'):
 
