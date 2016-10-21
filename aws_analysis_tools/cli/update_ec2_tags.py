@@ -111,10 +111,12 @@ class Application(krux_boto.Application):
         with stats.timing('update_tags'):
 
             # without region or instance id, we can't proceed
-            if not ec2_region or not instance_id:
+            if ec2_region is None or instance_id is None:
                 self.raise_critical_error(
-                    'Could not determine instance_id (%s) and/or ec2_region (%s)' %
-                    (instance_id, ec2_region)
+                    'Could not determine instance_id ({instance_id}) and/or ec2_region ({region})'.format(
+                        instance_id=instance_id,
+                        region=ec2_region,
+                    )
                 )
 
             # many places the info can come from, so let us know here what we found
