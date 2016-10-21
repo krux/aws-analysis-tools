@@ -19,9 +19,6 @@ import krux_boto
 from krux_boto import add_boto_cli_arguments
 
 
-EC2_CLASS_KEY = 's_classes'
-
-
 class Application(krux_boto.Application):
 
     def __init__(self):
@@ -132,7 +129,7 @@ class Application(krux_boto.Application):
             tags_dict = {
                 'environment': environment,
                 'cluster_name': cluster_name,
-                EC2_CLASS_KEY: ",".join(classes),
+                's_classes': ",".join(classes),
                 'os': os,
             }
 
