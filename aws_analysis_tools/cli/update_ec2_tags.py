@@ -117,7 +117,9 @@ class Application(krux_boto.Application):
                 instance_id, ec2_region, ' '.join(classes)
             )
 
+            #
             # Set up the tags we want to use
+            #
             tags_dict = {
                 'environment': environment,
                 'cluster_name': cluster_name,
@@ -147,14 +149,15 @@ class Application(krux_boto.Application):
 
                 # no matter what happens, we want to catch it and make sure
                 # log it appropriately before we re-raise
-                except Exception, e:
+                except Exception:
                     stats.incr('error.ec2_tag_update')
-                    self.raise_critical_error('Tag update failed: %s' % e)
+                    raise
 
 
 def main():
     app = Application()
-    app.update_tags()
+    with app.context():
+        app.update_tags()
 
 
 if __name__ == '__main__':
