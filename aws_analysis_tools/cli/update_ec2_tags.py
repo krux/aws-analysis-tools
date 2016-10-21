@@ -33,6 +33,7 @@ class Application(krux_boto.Application):
         self.environment = self.args.environment
         self.cluster_name = self.args.cluster_name
         self.classes = self.args.classes
+        self.os = self.args.os
         self.dry_run = self.args.dry_run
 
     def add_cli_arguments(self, parser):
@@ -75,6 +76,12 @@ class Application(krux_boto.Application):
         )
 
         group.add_argument(
+            '--os',
+            default=None,
+            help=("The name of the OS to set. Example: Trusty"),
+        )
+
+        group.add_argument(
             '--dry-run',
             default=False,
             action='store_true',
@@ -89,6 +96,7 @@ class Application(krux_boto.Application):
         classes=None,
         environment=None,
         cluster_name=None,
+        os=None,
         dry_run=False,
     ):
         log = self.logger
@@ -100,6 +108,7 @@ class Application(krux_boto.Application):
         classes = classes if classes is not None else self.classes
         dry_run = dry_run if dry_run is not None else self.dry_run
         environment = environment if environment is not None else self.environment
+        os = os if os is not None else self.os
         cluster_name = cluster_name if cluster_name is not None else self.cluster_name
 
         with stats.timing('update_tags'):
@@ -124,6 +133,7 @@ class Application(krux_boto.Application):
                 'environment': environment,
                 'cluster_name': cluster_name,
                 EC2_CLASS_KEY: ",".join(classes),
+                'os': os,
             }
 
             # quick dump of what we're about to do send.
