@@ -77,7 +77,7 @@ class Application(krux_boto.Application):
             # Let's make sure to tag this for now
             # TODO: Pull out the code to deduce this from krux-manage-instance and use it here.
             required=True,
-            help=("The name of the ubuntu release to set. Example: Trusty"),
+            help=("The name of the ubuntu release to set. Example: 'trusty'"),
         )
 
         group.add_argument(
