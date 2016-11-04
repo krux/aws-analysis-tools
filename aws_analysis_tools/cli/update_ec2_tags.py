@@ -30,7 +30,8 @@ class Application(krux_boto.Application):
         self.environment = self.args.environment
         self.cluster_name = self.args.cluster_name
         self.classes = self.args.classes
-        self.release = self.args.release
+        self.lts = self.args.lts
+        self.architecture = self.args.architecture
         self.dry_run = self.args.dry_run
 
     def add_cli_arguments(self, parser):
@@ -73,11 +74,17 @@ class Application(krux_boto.Application):
         )
 
         group.add_argument(
-            '--release',
+            '--lts', '--release',
             # Let's make sure to tag this for now
             # TODO: Pull out the code to deduce this from krux-manage-instance and use it here.
             required=True,
             help=("The name of the ubuntu release to set. Example: 'trusty'"),
+        )
+
+        group.add_argument(
+            '--architecture',
+            # TODO: Pull out the code to deduce this from krux-manage-instance and use it here.
+            help=("The architecture of this instance to set. Example: 'amd64'")
         )
 
         group.add_argument(
@@ -95,7 +102,8 @@ class Application(krux_boto.Application):
         classes=None,
         environment=None,
         cluster_name=None,
-        release=None,
+        lts=None,
+        architecture=None,
         dry_run=False,
     ):
         log = self.logger
@@ -107,8 +115,9 @@ class Application(krux_boto.Application):
         classes = classes if classes is not None else self.classes
         dry_run = dry_run if dry_run is not None else self.dry_run
         environment = environment if environment is not None else self.environment
-        release = release if release is not None else self.release
         cluster_name = cluster_name if cluster_name is not None else self.cluster_name
+        lts = lts if lts is not None else self.lts
+        architecture = architecture if architecture is not None else self.architecture
 
         with stats.timing('update_tags'):
 
@@ -134,7 +143,8 @@ class Application(krux_boto.Application):
                 'environment': environment,
                 'cluster_name': cluster_name,
                 's_classes': ",".join(classes),
-                'release': release,
+                'lts': lts,
+                'architecture': architecture,
             }
 
             # quick dump of what we're about to do send.
