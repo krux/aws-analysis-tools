@@ -9,6 +9,7 @@ AWS imposes on tags, and emits stats via krux.cli fanciness.
 # Standard Libraries #
 ######################
 from __future__ import absolute_import
+import platform
 
 ##################
 # Krux Libraries #
@@ -32,6 +33,7 @@ class Application(krux_boto.Application):
         self.classes = self.args.classes
         self.lts = self.args.lts
         self.architecture = self.args.architecture
+        self.kernel_version = self.args.kernel_version
         self.dry_run = self.args.dry_run
 
     def add_cli_arguments(self, parser):
@@ -88,6 +90,12 @@ class Application(krux_boto.Application):
         )
 
         group.add_argument(
+            '--kernel-version',
+            help=("The kernel version of this instance to set. Example: '3.13.0-137-generic' "
+                  "(default: `uname -r`)")
+        )
+
+        group.add_argument(
             '--dry-run',
             default=False,
             action='store_true',
@@ -104,6 +112,7 @@ class Application(krux_boto.Application):
         cluster_name=None,
         lts=None,
         architecture=None,
+        kernel_version=None,
         dry_run=False,
     ):
         log = self.logger
@@ -118,6 +127,7 @@ class Application(krux_boto.Application):
         cluster_name = cluster_name if cluster_name is not None else self.cluster_name
         lts = lts if lts is not None else self.lts
         architecture = architecture if architecture is not None else self.architecture
+        kernel_version = kernel_version or self.kernel_version or platform.release()
 
         with stats.timing('update_tags'):
 
@@ -145,6 +155,7 @@ class Application(krux_boto.Application):
                 's_classes': ",".join(classes),
                 'lts': lts,
                 'architecture': architecture,
+                'kernel_version': kernel_version,
             }
 
             # quick dump of what we're about to do send.
