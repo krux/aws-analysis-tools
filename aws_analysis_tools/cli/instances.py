@@ -237,7 +237,7 @@ class Application(krux_ec2.cli.Application):
                 i.tags.get('Name', ' '),
                 i.instance_type,
                 i._placement,
-                i.groups[0].name,
+                i.groups[0].name if len(i.groups) > 0 else None,
                 i.state,
                 i.root_device_type,
                 volumes or '-'
