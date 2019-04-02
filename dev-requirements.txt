@@ -1,5 +1,5 @@
 # Include base requirements
--r requirements.pip
+-r requirements.txt
 
 # For unit tests
 # GOTCHA: Coverage is pegged at the latest version of 3, because of the error it throw when detemining
