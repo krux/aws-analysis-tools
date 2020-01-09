@@ -14,6 +14,7 @@ from pprint import pformat
 # Internal libraries
 #
 
+import krux.cli
 import krux_ec2.cli
 from krux_ec2.filter import Filter
 
@@ -38,7 +39,7 @@ class Application(krux_ec2.cli.Application):
 
         parser.set_defaults(log_level='info')
 
-        group = krux_ec2.cli.get_group(parser, self.name)
+        group = krux.cli.get_group(parser, self.name)
 
         group.add_argument(
             "ip_address",

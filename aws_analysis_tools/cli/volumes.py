@@ -83,7 +83,7 @@ def get_volumes():
         ### the criteria fail
         wanted_node = True
 
-        for re_name, regex in regexes.iteritems():
+        for re_name, regex in regexes.items():
 
             ### What's the value we will be testing against?
             if re.search( 'name', re_name ):
@@ -176,7 +176,7 @@ def list_volumes():
 
     ### table.draw() blows up if there is nothing to print
     if volumes or not options.no_header:
-        print table.draw()
+        print(table.draw())
 
 if __name__ == '__main__':
     list_volumes()

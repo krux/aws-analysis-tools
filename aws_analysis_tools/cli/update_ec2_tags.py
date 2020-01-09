@@ -159,7 +159,7 @@ class Application(krux_boto.Application):
             }
 
             # quick dump of what we're about to do send.
-            for k, v in tags_dict.iteritems():
+            for k, v in tags_dict.items():
                 log.info('Setting tag "%s" to: %s', k, v)
 
             #
