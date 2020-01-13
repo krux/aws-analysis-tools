@@ -20,6 +20,7 @@ from texttable import Texttable
 #
 
 import krux_boto
+import krux.cli
 import krux_ec2.cli
 from krux_ec2.filter import Filter
 
@@ -64,7 +65,7 @@ class Application(krux_ec2.cli.Application):
         # Call to the superclass first
         super(Application, self).add_cli_arguments(parser)
 
-        group = krux_ec2.cli.get_group(parser, self.name)
+        group = krux.cli.get_group(parser, self.name)
 
         group.add_argument(
             "-H", "--no-header",
@@ -223,21 +224,26 @@ class Application(krux_ec2.cli.Application):
 
             # XXX there's a bug where you can't get the size of the volumes, it's
             # always reported as None :(
-            volumes = ", ".join([
-                ebs.volume_id for ebs in i.block_device_mapping.values()
-                if not ebs.delete_on_termination
-            ])
+
+            # Not bothering to convert to boto3:
+            # volumes = ", ".join([
+            #     ebs.volume_id for ebs in i.block_device_mapping.values()
+            #     if not ebs.delete_on_termination
+            # ])
+            volumes = None
 
             # you can use i.region instead of i._placement, but it pretty
             # prints to RegionInfo:us-east-1. For now, use the private version
             # XXX EVERY column in this output had better have a non-zero length
             # or texttable blows up with 'width must be greater than 0' error
+            name = [tag['Value'] for tag in i.tags if tag['Key'] == 'Name']
             table.add_row([
                 i.id,
-                i.tags.get('Name', ' '),
+                name[0] if len(name) else None,
                 i.instance_type,
-                i._placement,
-                i.groups[0].name if len(i.groups) > 0 else None,
+                i.placement['AvailabilityZone'],
+                i.security_groups[0]['GroupName'] if len(
+                    i.security_groups) else None,
                 i.state,
                 i.root_device_type,
                 volumes or '-'
@@ -245,7 +251,7 @@ class Application(krux_ec2.cli.Application):
 
         # table.draw() blows up if there is nothing to print
         if instances or not self.args.no_header:
-            print table.draw()
+            print(table.draw())
 
     def run(self):
         self.logger.debug('Parsed arguments: %s', self.args)

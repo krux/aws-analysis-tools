@@ -142,7 +142,7 @@ def search_tags(query_terms, passed_regions=None, log=None):
             for res in ec2.get_all_instances(filters=query):
                 instance = res.instances[0]
                 inst_names.append(instance.tags.get('Name'))
-        except boto.exception.EC2ResponseError, e:
+        except boto.exception.EC2ResponseError as e:
             log.error('Unable to query region %r due to %r', region, e)
             continue
 
@@ -229,7 +229,7 @@ def main():
     ### proceed normally, otherwise, print a simple usage statement and exit
     ### with status 1.
     parsed_query, regions = parse_query(app.args.query)
-    print app.render(search_tags(parsed_query, app.args.regions))
+    print(app.render(search_tags(parsed_query, app.args.regions)))
 
 
 if __name__ == '__main__':

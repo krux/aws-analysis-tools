@@ -13,7 +13,7 @@ from __future__ import absolute_import
 from setuptools import setup, find_packages
 
 # We use the version to construct the DOWNLOAD_URL.
-VERSION      = '0.6.4'
+VERSION      = '0.6.5'
 
 # URL to the repository on Github.
 REPO_URL     = 'https://github.com/krux/aws-analysis-tools'
@@ -21,6 +21,7 @@ REPO_URL     = 'https://github.com/krux/aws-analysis-tools'
 # forget to tag!
 DOWNLOAD_URL = ''.join((REPO_URL, '/tarball/release/', VERSION))
 
+REQUIREMENTS = ['docopt', 'eventlet', 'reversefold.util', 'texttable']
 
 ### XXX these all need to be in sub dirs, or it won't work :(
 setup(
@@ -34,7 +35,7 @@ setup(
     license          = 'All Rights Reserved.',
     packages         = find_packages(),
     # dependencies are named in requirements.pip
-    install_requires = [],
+    install_requires = REQUIREMENTS,
     entry_points     = {
         'console_scripts': [
             'krux-search-ec2-tags    = aws_analysis_tools.cli.search_ec2_tags:main',

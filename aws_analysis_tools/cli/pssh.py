@@ -69,7 +69,7 @@ def remove_ssh_warnings(stderr, options):
 def query(string):
     parsed_query, parsed_regions = parse_query(string)
     response = search_tags(parsed_query, passed_regions=parsed_regions)
-    print "Matched the following hosts: %s" % ', '.join(response)
+    print("Matched the following hosts: %s" % ', '.join(response))
     return response
 
 
@@ -98,14 +98,14 @@ def main():
     if options.query:
         hosts = query(options.query)
         if len(hosts) > 0 and hosts[0].startswith("Error"):
-            print hilite("Sorry, search-ec2-tags.py returned an error:\n %s" % hosts, options, 'red')
+            print(hilite("Sorry, search-ec2-tags.py returned an error:\n %s" % hosts, options, 'red'))
             sys.exit(1)
 
     if options.host:
         hosts = [host.strip() for host in hosts.split(',')]
 
     if len(hosts) == 0:
-        print hilite("Sorry, search-ec2-tags.py returned zero results.", options, 'red')
+        print(hilite("Sorry, search-ec2-tags.py returned zero results.", options, 'red'))
         sys.exit(1)
 
     for host in hosts:
@@ -130,34 +130,34 @@ def main():
         # has it finished? go ahead and print the host and results.
         if not too_long and proc.poll() is not None:
             stdout, stderr = proc.communicate()
-            print "[%s]" % hilite(host, options, bold=True)
+            print("[%s]" % hilite(host, options, bold=True))
             if stdout:
-                print "STDOUT: \n%s" % hilite(stdout, options, 'green', False)
+                print("STDOUT: \n%s" % hilite(stdout, options, 'green', False))
 
             stderr = remove_ssh_warnings(stderr, options)
             if stderr and len(stderr) > 1:
-                print "STDERR: \n%s" % hilite(stderr, options, 'red', False)
+                print("STDERR: \n%s" % hilite(stderr, options, 'red', False))
             del procs[index]
             del hosts[index]
 
         elif not too_long and (ticks > 1) and (ticks % 5 == 0):
             # only print "waiting still.." every 5 sec.
-            print "waiting on these hosts, still: %s" % ', '.join(hosts)
+            print("waiting on these hosts, still: %s" % ', '.join(hosts))
             time.sleep(1)
 
         if too_long:
             # it has been too long. print stdout/stderr one line at a time, so people
             # know what's happening, and aren't left waiting for timeout (and
             # then they never see stdout/stderr).
-            print "%s (responding slowly - here is the output so far)" % \
-                hilite('[' + host + ']', options, bold=True)
+            print("%s (responding slowly - here is the output so far)" % \
+                hilite('[' + host + ']', options, bold=True))
 
             while 1:
                 if proc.poll() is not None:
                     break
 
                 if select.select([proc.stdout], [], [], 0)[0]:
-                    print "STDOUT: \n"
+                    print("STDOUT: \n")
                 while select.select([proc.stdout], [], [], 0)[0]:
                     stdout = proc.stdout.readline()
                     sys.stdout.write(hilite(stdout, options, 'green', False))
@@ -166,7 +166,7 @@ def main():
                     stderr = remove_ssh_warnings(proc.stderr.readline(), options)
                     if stderr is None:
                         break
-                    print "STDERR: \n"
+                    print("STDERR: \n")
                     sys.stdout.write(hilite(stderr, options, 'red', False))
 
                 if ticks > options.timeout:
@@ -180,12 +180,12 @@ def main():
             if proc.poll() is not None:
                 stdout = '\n'.join(proc.stdout.readlines())
                 if stdout:
-                    print "STDOUT: \n%s" % hilite(stdout, options,
-                                                  'green', False)
+                    print("STDOUT: \n%s" % hilite(stdout, options,
+                                                  'green', False))
                 stderr = '\n'.join(proc.stderr.readlines())
                 if stderr:
-                    print "STDERR: \n%s" % hilite(stderr, options,
-                                                  'red', False)
+                    print("STDERR: \n%s" % hilite(stderr, options,
+                                                  'red', False))
 
             # remove from queue
             if proc.poll() is not None:
@@ -203,7 +203,7 @@ def main():
 
         if ticks > options.timeout:
             [bad.terminate() for bad in procs]
-            print hilite("\nSorry, the following hosts took too long, and I gave up: %s\n" % ','.join(hosts), options, 'red')
+            print(hilite("\nSorry, the following hosts took too long, and I gave up: %s\n" % ','.join(hosts), options, 'red'))
             break
 
 if __name__ == '__main__':

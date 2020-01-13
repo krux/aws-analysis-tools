@@ -50,7 +50,7 @@ from aws_analysis_tools.cli.search_ec2_tags import parse_query, search_tags
 def _query(string):
     parsed_query, parsed_regions = parse_query(string)
     response = search_tags(parsed_query, passed_regions=parsed_regions)
-    print 'Matched the following hosts: %s' % ', '.join(response)
+    print('Matched the following hosts: %s' % ', '.join(response))
     return response
 
 
@@ -61,29 +61,29 @@ def main():
     query = args['--query']
 
     if args['--hosts'] and query:
-        print Fore.RED + 'You can use only one of --query and --hosts' + Fore.RESET
+        print(Fore.RED + 'You can use only one of --query and --hosts' + Fore.RESET)
         sys.exit(1)
 
     hosts = []
     if query:
         hosts = _query(query)
         if len(hosts) > 0 and hosts[0].startswith('Error'):
-            print '%sSorry, search-ec2-tags.py returned an error:\n %s%s' % (
-                Fore.RED, hosts, Fore.RESET)
+            print('%sSorry, search-ec2-tags.py returned an error:\n %s%s' % (
+                Fore.RED, hosts, Fore.RESET))
             sys.exit(1)
 
     if args['--hosts']:
         hosts = [host.strip() for host in args['--hosts'].split(',')]
 
     if len(hosts) == 0:
-        print Fore.RED + 'Sorry, search-ec2-tags.py returned zero results.' + Fore.RESET
+        print(Fore.RED + 'Sorry, search-ec2-tags.py returned zero results.' + Fore.RESET)
         sys.exit(1)
 
     concurrency = int(args['--concurrency'])
     if concurrency == 0:
         concurrency = len(hosts)
     elif concurrency < 0:
-        print Fore.RED + '--concurrency must be 0 or a positive integer' + Fore.RESET
+        print(Fore.RED + '--concurrency must be 0 or a positive integer' + Fore.RESET)
         sys.exit(1)
 
     ppl = max(len(host) for host in hosts) + 3
