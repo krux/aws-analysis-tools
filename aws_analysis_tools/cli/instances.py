@@ -185,6 +185,8 @@ class Application(krux_ec2.cli.Application):
             )
             filtered = []
             for i in instances:
+                # Include instances which have tags (not terminated) and
+                # which don't have a value for the Name tag
                 if i.tags and not [tag for tag in i.tags
                                    if tag['Key'] == 'Name' and tag['Value']]:
                         filtered.append(i)
