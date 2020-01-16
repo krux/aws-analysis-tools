@@ -183,7 +183,14 @@ class Application(krux_ec2.cli.Application):
                 'Excluding instances from the list of %s instances based on filter (%s)',
                 len(instances), 'no_name'
             )
-            instances = [i for i in instances if 'Name' not in i.tags]
+            filtered = []
+            for i in instances:
+                # Include instances which have tags (not terminated) and
+                # which don't have a value for the Name tag
+                if i.tags and not [tag for tag in i.tags
+                                   if tag['Key'] == 'Name' and tag['Value']]:
+                        filtered.append(i)
+            instances = filtered
 
         # Iterate through found instances and filter based on exclude options
         for opt in Application._OPTS:
@@ -197,10 +204,10 @@ class Application(krux_ec2.cli.Application):
             for opt_value in opt_values:
                 # Exclude instances if they have an attribute that is excluded
                 instances = [
-                                i for i in instances
-                                if Application._INSTANCE_ATTR[opt](i, opt_value) is None or
-                                opt_value not in Application._INSTANCE_ATTR[opt](i, opt_value)
-                            ]
+                    i for i in instances
+                    if hasattr(i, opt_value) and (Application._INSTANCE_ATTR[opt](i, opt_value) is None or
+                        opt_value not in Application._INSTANCE_ATTR[opt](i, opt_value))
+                ]
 
         return instances
 
